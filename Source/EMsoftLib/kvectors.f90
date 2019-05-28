@@ -40,8 +40,13 @@
 !> @details This was part of the dynamical module, but was moved into a separate
 !> module once I realized that I had several versions of the Calckvectors subroutine.
 !> From now on, there is only one single version that can deal with all possible cases.
+!
+!> @details In version 2.0 we try a different route for k-vector sampling in the 230
+!> space groups, using the space group symmetry elements rather than implementing all 
+!> special cases (which is difficult to thoroughly test).
 ! 
 !> @date   04/29/13 MDG 1.0 original
+!> @date   05/28/19 MDG 2.0 revision of kvector sampling for space groups
 !--------------------------------------------------------------------------
 module kvectors
 
@@ -1179,6 +1184,144 @@ if (mapmode.eq.'RoscaLambertLegendre') then
 end if
 
 end subroutine Calckvectors
+
+
+!--------------------------------------------------------------------------
+!
+! SUBROUTINE: CalckvectorsSG
+!
+!> @author Marc De Graef, Carnegie Mellon University
+!
+!> @brief create a linked list of unique wave vectors, used for EBSD and other master patterns
+!
+!> @details This is a new version that uses space group symmetry elements (really point group elements) to
+!> determine the list of unique k-vectors for sampling of a given space group.  The routine only covers the
+!> RoscLambert and RoscaLambertLegendre cases of the Calckvectors routine above.
+!
+!> @todo 
+!>   - test basic version
+!>   - add hexagonal grid, maybe by extending the square grid ?
+!>   - add Legendre mode 
+!>   - 
+!>
+!
+!> @param khead head of linked list
+!> @param cell unit cell pointer
+!> @param npx number of vectors along x 
+!> @param numk total number of wave vectors in list
+!> @param mapmode sets the mapping mode to be used ('RoscaLambert' or 'RoscaLambertLegendre')
+!
+!> @date   05/28/19 MDG 1.0 original
+!--------------------------------------------------------------------------
+recursive subroutine CalckvectorsSG(khead,cell,npx,numk,mapmode,usehex,LegendreArray)
+!DEC$ ATTRIBUTES DLLEXPORT :: CalckvectorsSG
+
+use io
+use error
+use constants
+use diffraction
+use crystal
+use lambert
+
+IMPLICIT NONE
+
+type(kvectorlist),pointer               :: khead
+type(unitcell),pointer                  :: cell
+integer(kind=irg),INTENT(IN)            :: npx          !< number of kvectors along semi-edge of master pattern
+integer(kind=irg),INTENT(OUT)           :: numk         !< total number of kvectors in linked list
+character(*),INTENT(IN)                 :: mapmode      !< controls the type of mapping used ('RoscaLambert', 'RoscaLambertLegendre')
+logical,INTENT(IN),OPTIONAL             :: usehex       !< hexagonal mode 
+real(kind=dbl),INTENT(IN),OPTIONAL      :: LegendreArray(2*npx+1) !< Legendre lattitude grid points for spherical indexing
+
+logical,allocatable                     :: LNH(:,:), LSH(:,:)
+integer(kind=irg)                       :: np, i, j, n, nsym, ierr, ip(2), istat 
+real(kind=dbl)                          :: lp(2), un(3), delta, kstar(3) 
+real(kind=dbl)                          :: stmp(48,3)
+logical                                 :: dohex, doLegendre
+type(kvectorlist),pointer               :: ktail, ktmp
+
+! check for optional parameters
+dohex = .FALSE.
+if (present(usehex)) then 
+  if (usehex.eqv..TRUE.) dohex = .TRUE.
+end if
+
+doLegendre = .FALSE.
+if (present(LegendreArray)) doLegendre = .TRUE.
+
+! allocate the logical arrays to keep track of points already visited
+np = 2*npx+1
+allocate( LNH(-npx:npx,-npx:npx), LSH(-npx:npx,-npx:npx) )
+LNH = .FALSE.
+LSH = .FALSE.
+
+! initialize parameters 
+delta =  1.D0 / dble(npx)
+
+! allocate the head of the linked list
+allocate(khead,stat=istat)                   ! allocate new value
+if (istat.ne.0) call FatalError('Calckvectors',' unable to allocate khead pointer')
+ktail => khead                               ! tail points to new value
+nullify(ktail%next)                          ! nullify next in new value
+numk = 1                                     ! keep track of number of k-vectors so far
+ktail%hs = 1                                 ! this lies in the Northern Hemisphere
+ktail%i = 0                                  ! i-index of beam
+ktail%j = 0                                  ! j-index of beam
+kstar = (/ 0.0, 0.0, 1.0 /)                  ! we always use c* as the center of the RoscaLambert projection
+call NormVec(cell,kstar,'c')                 ! normalize incident direction
+kstar = kstar/cell%mLambda                   ! divide by wavelength
+! and transform to reciprocal crystal space using the structure matrix
+ktail%k = matmul(transpose(cell%dsm),kstar)
+ktail%kn = 1.0/cell%mLambda
+
+LNH(0,0) = .TRUE.
+
+! first we travel through the Northern Lambert square LNH
+do i=-npx,npx
+  do j=-npx,npx 
+    lp = (/ dble(i), dble(j) /) * delta           ! square Lambert coordinates
+    if (NH(i,j).eqv..FALSE.) then                 ! check to make sure have we not yet visited this point
+      un = LambertSquareToSphere(lp, ierr)        ! unit normal on sphere 
+      call CalcStar(cell, un, nsym, stmp, 'r')    ! generate star of un
+      do n=1,nsym                                 ! loop over all equivalent k-vectors
+        ip = nint(LambertSphereToSquare(stmp(n,1:3),ierr) * dble(npx))
+        if (n.eq.1) then                          ! add this vector to the linked list for the identity operation
+          call AddkVector(ktail,cell,numk,ip,i,j)
+        end if 
+        if (stmp(n,3).lt.0.D0) then               ! flip all the equivalent points to .TRUE. so we don't visit them again
+          LSH(ip(1),ip(2)) = .TRUE.
+        else
+          LNH(ip(1),ip(2)) = .TRUE.
+        end if
+      end do
+    end if
+  end do
+end do 
+
+! then we go through the Southern Lambert square, avoiding the equatorial edge
+do i=-npx+1,npx-1
+  do j=-npx+1,npx-1 
+    lp = (/ dble(i), dble(j) /) * delta           ! square Lambert coordinates
+    if (NH(i,j).eqv..FALSE.) then                 ! check to make sure have we not yet visited this point
+      un = LambertSquareToSphere(lp, ierr)        ! unit normal on sphere 
+      un(3) = -un(3)                              ! make sure we are in the Southern hemisphere
+      call CalcStar(cell, un, nsym, stmp, 'r')    ! generate star of un
+      do n=1,nsym                                 ! loop over all equivalent k-vectors
+        ip = nint(LambertSphereToSquare(stmp(n,1:3),ierr) * dble(npx))
+        if (n.eq.1) then                          ! add this vector to the linked list for the identity operation
+          call AddkVector(ktail,cell,numk,ip,i,j)
+        end if 
+        if (stmp(n,3).lt.0.D0) then               ! flip all the equivalent points to .TRUE. so we don't visit them again
+          LSH(ip(1),ip(2)) = .TRUE.
+        else
+          LNH(ip(1),ip(2)) = .TRUE.
+        end if
+      end do
+    end if
+  end do
+end do 
+
+end subroutine CalckvectorsSG
 
 
 !--------------------------------------------------------------------------
