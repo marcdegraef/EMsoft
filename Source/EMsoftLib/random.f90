@@ -1,3 +1,11 @@
+!--------------------------------------------------------------------------
+! EMsoft:random.f90
+!--------------------------------------------------------------------------
+!> @author Alan Miller amiller @ bigpond.net.au
+!
+!> @date  06/26/19  MDG 1.0 incorporation into EMsoft; made all functions recursive
+!>                          to allow for calls inside OpenMP constructs
+!--------------------------------------------------------------------------
 MODULE random
 ! A module for random number generation from the following distributions:
 !
@@ -99,7 +107,7 @@ INTEGER, PARAMETER :: dp = SELECTED_REAL_KIND(12, 60)
 CONTAINS
 
 
-FUNCTION random_normal() RESULT(fn_val)
+recursive FUNCTION random_normal() RESULT(fn_val)
 
 ! Adapted from the following Fortran 77 code
 !      ALGORITHM 712, COLLECTED ALGORITHMS FROM ACM.
@@ -146,7 +154,7 @@ END FUNCTION random_normal
 
 
 
-FUNCTION random_gamma(s, first) RESULT(fn_val)
+recursive FUNCTION random_gamma(s, first) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -181,7 +189,7 @@ END FUNCTION random_gamma
 
 
 
-FUNCTION random_gamma1(s, first) RESULT(fn_val)
+recursive FUNCTION random_gamma1(s, first) RESULT(fn_val)
 
 ! Uses the algorithm in
 ! Marsaglia, G. and Tsang, W.W. (2000) `A simple method for generating
@@ -230,7 +238,7 @@ END FUNCTION random_gamma1
 
 
 
-FUNCTION random_gamma2(s, first) RESULT(fn_val)
+recursive FUNCTION random_gamma2(s, first) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -300,7 +308,7 @@ END FUNCTION random_gamma2
 
 
 
-FUNCTION random_chisq(ndf, first) RESULT(fn_val)
+recursive FUNCTION random_chisq(ndf, first) RESULT(fn_val)
 
 !     Generates a random variate from the chi-squared distribution with
 !     ndf degrees of freedom
@@ -316,7 +324,7 @@ END FUNCTION random_chisq
 
 
 
-FUNCTION random_exponential() RESULT(fn_val)
+recursive FUNCTION random_exponential() RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -343,7 +351,7 @@ END FUNCTION random_exponential
 
 
 
-FUNCTION random_Weibull(a) RESULT(fn_val)
+recursive FUNCTION random_Weibull(a) RESULT(fn_val)
 
 !     Generates a random variate from the Weibull distribution with
 !     probability density:
@@ -363,7 +371,7 @@ END FUNCTION random_Weibull
 
 
 
-FUNCTION random_beta(aa, bb, first) RESULT(fn_val)
+recursive FUNCTION random_beta(aa, bb, first) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -440,7 +448,7 @@ END FUNCTION random_beta
 
 
 
-FUNCTION random_t(m) RESULT(fn_val)
+recursive FUNCTION random_t(m) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -501,7 +509,7 @@ END FUNCTION random_t
 
 
 
-SUBROUTINE random_mvnorm(n, h, d, f, first, x, ier)
+recursive SUBROUTINE random_mvnorm(n, h, d, f, first, x, ier)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -602,7 +610,7 @@ END SUBROUTINE random_mvnorm
 
 
 
-FUNCTION random_inv_gauss(h, b, first) RESULT(fn_val)
+recursive FUNCTION random_inv_gauss(h, b, first) RESULT(fn_val)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -673,7 +681,7 @@ END FUNCTION random_inv_gauss
 
 
 
-FUNCTION random_Poisson(mu, first) RESULT(ival)
+recursive FUNCTION random_Poisson(mu, first) RESULT(ival)
 !**********************************************************************
 !     Translated to Fortran 90 by Alan Miller from:
 !                           RANLIB
@@ -915,7 +923,7 @@ END FUNCTION random_Poisson
 
 
 
-FUNCTION random_binomial1(n, p, first) RESULT(ival)
+recursive FUNCTION random_binomial1(n, p, first) RESULT(ival)
 
 ! FUNCTION GENERATES A RANDOM BINOMIAL VARIATE USING C.D.Kemp's method.
 ! This algorithm is suitable when many random variates are required
@@ -992,7 +1000,7 @@ END FUNCTION random_binomial1
 
 
 
-FUNCTION bin_prob(n, p, r) RESULT(fn_val)
+recursive FUNCTION bin_prob(n, p, r) RESULT(fn_val)
 !     Calculate a binomial probability
 
 INTEGER, INTENT(IN) :: n, r
@@ -1010,7 +1018,7 @@ END FUNCTION bin_prob
 
 
 
-FUNCTION lngamma(x) RESULT(fn_val)
+recursive FUNCTION lngamma(x) RESULT(fn_val)
 
 ! Logarithm to base e of the gamma function.
 !
@@ -1074,7 +1082,7 @@ END FUNCTION lngamma
 
 
 
-FUNCTION random_binomial2(n, pp, first) RESULT(ival)
+recursive FUNCTION random_binomial2(n, pp, first) RESULT(ival)
 !**********************************************************************
 !     Translated to Fortran 90 by Alan Miller from:
 !                              RANLIB
@@ -1306,7 +1314,7 @@ END FUNCTION random_binomial2
 
 
 
-FUNCTION random_neg_binomial(sk, p) RESULT(ival)
+recursive FUNCTION random_neg_binomial(sk, p) RESULT(ival)
 
 ! Adapted from Fortran 77 code from the book:
 !     Dagpunar, J. 'Principles of random variate generation'
@@ -1381,7 +1389,7 @@ END FUNCTION random_neg_binomial
 
 
 
-FUNCTION random_von_Mises(k, first) RESULT(fn_val)
+recursive FUNCTION random_von_Mises(k, first) RESULT(fn_val)
 
 !     Algorithm VMD from:
 !     Dagpunar, J.S. (1990) `Sampling from the von Mises distribution via a
@@ -1478,7 +1486,7 @@ END FUNCTION random_von_Mises
 
 
 
-SUBROUTINE integral(a, b, result, dk)
+recursive SUBROUTINE integral(a, b, result, dk)
 
 !     Gaussian integration of exp(k.cosx) from a to b.
 
@@ -1509,7 +1517,7 @@ END SUBROUTINE integral
 
 
 
-FUNCTION random_Cauchy() RESULT(fn_val)
+recursive FUNCTION random_Cauchy() RESULT(fn_val)
 
 !     Generate a random deviate from the standard Cauchy distribution
 
@@ -1531,7 +1539,7 @@ END FUNCTION random_Cauchy
 
 
 
-SUBROUTINE random_order(order, n)
+recursive SUBROUTINE random_order(order, n)
 
 !     Generate a random ordering of the integers 1 ... n.
 
@@ -1565,7 +1573,7 @@ END SUBROUTINE random_order
 
 
 
-SUBROUTINE seed_random_number(iounit)
+recursive SUBROUTINE seed_random_number(iounit)
 
 INTEGER, INTENT(IN)  :: iounit
 

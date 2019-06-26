@@ -63,28 +63,27 @@ contains
 !> @param im image array; must have values in range [1..256]
 ! 
 !> @date 03/23/18 MDG 1.0 original
+!> @date 06/26/19 MDG 2.0 replaced POIDEV call with random_Poisson call + clean up of code
+!>
+!> This routine is still VERY slow... continue looking for a faster one !
 !--------------------------------------------------------------------------
-recursive function applyPoissonNoise(image, nx, ny, idum) result(noisy)
+recursive function applyPoissonNoise(image, nx, ny) result(noisy)
 !DEC$ ATTRIBUTES DLLEXPORT :: applyPoissonNoise
 
-use noise
+use random
 
 IMPLICIT NONE
-
-integer, parameter              :: K4B=selected_int_kind(9)
 
 integer(kind=irg),INTENT(IN)    :: nx
 integer(kind=irg),INTENT(IN)    :: ny
 real(kind=sgl),INTENT(IN)       :: image(nx, ny)
-integer(K4B),INTENT(INOUT)      :: idum
 real(kind=sgl)                  :: noisy(nx, ny)
 
 integer(kind=irg)               :: i, j  
-real(kind=sgl)                  :: av, mult, invmult 
 
 do i=1, nx
   do j=1, ny
-    noisy(i,j) = POIDEV(image(i,j),idum)
+    noisy(i,j) = random_Poisson(image(i,j),first=.FALSE.)
   end do 
 end do
 

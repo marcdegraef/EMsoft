@@ -51,6 +51,7 @@
 !> @date  05/21/16  MDG 5.4 updated for new HDF file organization
 !> @date  10/13/17  MDG 5.5 added code to compute "hybrid" deformed EBSD patterns...
 !> @date  02/22/18  MDG 5.6 added option to include pattern center and deformation tensor in Euler input file
+!> @date  06/26/19  MDG 5.7 replaced Poisson deviate from noise.f90 with random_Poisson calls from random.f90
 ! ###################################################################
 
 program EMEBSD
@@ -111,6 +112,7 @@ interface
         use timing
         use stringconstants
         use math
+        use random
 
         IMPLICIT NONE
 
@@ -142,7 +144,6 @@ interface
         use Lambert
         use quaternions
         use rotations
-        use noise
         use HDF5
         use HDFsupport
         use ISO_C_BINDING
@@ -150,6 +151,7 @@ interface
         use timing
         use stringconstants
         use math
+        use random
 
         IMPLICIT NONE
 
@@ -281,6 +283,7 @@ end program EMEBSD
 !> @date 12/20/17  MDG 7.2 added switch to turn off realistic background intensity profile
 !> @date 04/03/18  MDG 8.0 rewrite with separated name lists and new more modular data structures
 !> @date 02/19/19  MDG 8.1 corrects pattern orientation (manual indexing revealed an unwanted upside down flip)
+!> @date 06/26/19  MDG 8.2 replaced Poisson deviate from noise.f90 with random_Poisson calls from random.f90
 !--------------------------------------------------------------------------
 subroutine ComputeEBSDPatterns(enl, mcnl, mpnl, numangles, angles, EBSDMCdata, EBSDMPdata, EBSDdetector, progname, nmldeffile)
 
@@ -307,6 +310,7 @@ use omp_lib
 use timing
 use stringconstants
 use math
+use random
 
 IMPLICIT NONE
 
@@ -366,8 +370,7 @@ character(len=3)                        :: outputformat
 character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
 
 ! parameter for random number generator
-integer, parameter                      :: K4B=selected_int_kind(9)      ! used by ran function in math.f90
-integer(K4B)                            :: idum
+integer(kind=irg)                       :: idum
 
 type(HDFobjectStackType),pointer        :: HDF_head
 type(unitcell),pointer                  :: cell
@@ -781,7 +784,6 @@ call OMP_SET_NUM_THREADS(nthreads)
 call CPU_TIME(tstart)
 call Time_tick(tick)
 
-write (*,*) 'applying noise ? ', noise
 
 !====================================
 !====================================
@@ -797,9 +799,9 @@ do ibatch=1,totnumbatches
 
 ! initialize the random number generator for the Poison noise
   if (noise.eqv..TRUE.) then 
-    idum = -1-TID               
+    idum = random_Poisson(1000.0, first=.TRUE.)
   else
-    idum = 0_K4B
+    idum = 0
   end if
 
 ! each thread needs a private copy of the master and accum arrays; not having
@@ -1214,7 +1216,6 @@ use EBSDmod
 use Lambert
 use quaternions
 use rotations
-use noise
 use HDF5
 use HDFsupport
 use ISO_C_BINDING
@@ -1222,6 +1223,7 @@ use omp_lib
 use timing
 use stringconstants
 use math
+use random
 
 IMPLICIT NONE
 
@@ -1279,8 +1281,7 @@ character(len=3)                        :: outputformat
 character(fnlen, KIND=c_char),allocatable,TARGET :: stringarray(:)
 
 ! parameter for random number generator
-integer, parameter                      :: K4B=selected_int_kind(9)      ! used by ran function in math.f90
-integer(K4B)                            :: idum
+integer(kind=irg)                       :: idum
 
 type(HDFobjectStackType),pointer        :: HDF_head
 type(unitcell),pointer                  :: cell
@@ -1301,7 +1302,7 @@ real(kind=sgl)                          :: bitrange
 ! new stuff: deformation tensor
 real(kind=dbl)                          :: Umatrix(3,3), Fmatrix(3,3), Smatrix(3,3), quF(4), Fmatrix_inverse(3,3), &
                                            Gmatrix(3,3)
-logical                                 :: includeFmatrix=.FALSE.
+logical                                 :: includeFmatrix=.FALSE., noise
 
 !====================================
 ! max number of OpenMP threads on this platform
@@ -1337,6 +1338,9 @@ if (Emax.gt.EBSDMCdata%numEbins)  Emax=EBSDMCdata%numEbins
 nel = float(mcnl%totnum_el) * float(EBSDMCdata%multiplier)
 emult = nAmpere * 1e-9 / nel  ! multiplicative factor to convert MC data to an equivalent incident beam of 1 nanoCoulomb
 write (*,*) ' multiplicative factor to generate 1 nC of incident electrons ', emult
+
+noise = .FALSE.
+if (enl%poisson.eq.'y') noise = .TRUE.
 
 !====================================
 ! init a bunch of parameters
@@ -1594,6 +1598,13 @@ do ibatch=1,totnumbatches
   tmLPNH = EBSDMPdata%mLPNH
   tmLPSH = EBSDMPdata%mLPSH
 
+! initialize the random number generator for the Poison noise
+  if (noise.eqv..TRUE.) then 
+    idum = random_Poisson(1000.0, first=.TRUE.)
+  else
+    idum = 0
+  end if
+  
 ! allocate the arrays that will hold the computed pattern
   allocate(binned(binx,biny),stat=istat)
   if (trim(bitmode).eq.'char') then 
@@ -1673,18 +1684,18 @@ do ibatch=1,totnumbatches
     if (includeFmatrix.eqv..TRUE.) then 
      if (enl%includebackground.eq.'y') then
       call CalcEBSDPatternSingleFull(ipar,orpcdef%quatang(1:4,iang),taccum,tmLPNH,tmLPSH,trgx,trgy,trgz,binned, &
-                                     Emin,Emax,mask,prefactor,Fmatrix_inverse)
+                                     Emin,Emax,mask,prefactor,Fmatrix_inverse,applynoise=idum)
      else
       call CalcEBSDPatternSingleFull(ipar,orpcdef%quatang(1:4,iang),taccum,tmLPNH,tmLPSH,trgx,trgy,trgz,binned, &
-                                     Emin,Emax,mask,prefactor,Fmatrix_inverse,removebackground='y')
+                                     Emin,Emax,mask,prefactor,Fmatrix_inverse,removebackground='y',applynoise=idum)
      end if
     else
      if (enl%includebackground.eq.'y') then
       call CalcEBSDPatternSingleFull(ipar,orpcdef%quatang(1:4,iang),taccum,tmLPNH,tmLPSH,trgx,trgy,trgz,binned, &
-                                     Emin,Emax,mask,prefactor)
+                                     Emin,Emax,mask,prefactor,applynoise=idum)
      else
       call CalcEBSDPatternSingleFull(ipar,orpcdef%quatang(1:4,iang),taccum,tmLPNH,tmLPSH,trgx,trgy,trgz,binned, &
-                                     Emin,Emax,mask,prefactor,removebackground='y')
+                                     Emin,Emax,mask,prefactor,removebackground='y',applynoise=idum)
      end if
     end if
 

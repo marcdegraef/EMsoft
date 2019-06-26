@@ -1375,8 +1375,6 @@ use filters
 
 IMPLICIT NONE
 
-integer, parameter                              :: K4B=selected_int_kind(9)
-
 integer(kind=irg),INTENT(IN)                    :: ipar(7)
 real(kind=sgl),INTENT(IN)                       :: qu(4) 
 real(kind=dbl),INTENT(IN)                       :: prefactor
@@ -1391,7 +1389,7 @@ real(kind=sgl),INTENT(OUT)                      :: binned(ipar(2)/ipar(1),ipar(3
 real(kind=sgl),INTENT(IN)                       :: mask(ipar(2)/ipar(1),ipar(3)/ipar(1))
 real(kind=dbl),INTENT(IN),optional              :: Fmatrix(3,3)
 character(1),INTENT(IN),OPTIONAL                :: removebackground
-integer(K4B),INTENT(INOUT),OPTIONAL             :: applynoise
+integer(kind=irg),INTENT(INOUT),OPTIONAL        :: applynoise
 
 real(kind=sgl),allocatable                      :: EBSDpattern(:,:)
 real(kind=sgl),allocatable                      :: wf(:)
@@ -1416,7 +1414,7 @@ end if
 
 noise = .FALSE.
 if (present(applynoise)) then
-  if (applynoise.ne.0_K4B) noise = .TRUE.
+  if (applynoise.ne.0) noise = .TRUE.
 end if
 
 allocate(EBSDpattern(ipar(2),ipar(3)),stat=istat)
@@ -1483,9 +1481,10 @@ end do
 
 EBSDpattern = prefactor * EBSDpattern
 
-! do we need to apply Poisson noise ?  (slow...)
+! do we need to apply Poisson noise ?  
+! uses new random_Poisson noise from random.f90 module
 if (noise.eqv..TRUE.) then 
-  EBSDpattern = applyPoissonNoise( EBSDpattern, ipar(2), ipar(3), applynoise )
+  EBSDpattern = applyPoissonNoise( EBSDpattern, ipar(2), ipar(3))
 end if
 
 ! do we need to bin the pattern ?
