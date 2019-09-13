@@ -14,7 +14,21 @@ if(${CMAKE_MAJOR_VERSION} VERSION_GREATER_EQUAL "3.13.0")
   cmake_policy(SET CMP0079 NEW)
 endif()
 
-cmake_minimum_required(VERSION 3.8.0)
+cmake_minimum_required(VERSION 3.12.0)
+
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+# the RPATH to be used when installing
+SET(CMAKE_INSTALL_RPATH "${FCL_SOURCE_DIR}/libs")
+
+# don't add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
 if(NOT "${EMsoft_SDK}" STREQUAL "")
   include("${EMsoft_SDK}/EMsoft_SDK.cmake")
@@ -206,8 +220,8 @@ set(CMAKE_MODULE_PATH ${EMsoft_SOURCE_DIR}/Support/CMakeModules ${CMAKE_MODULE_P
 
 # set(EXE_DEBUG_EXTENSION "_debug")
 set(EXE_DEBUG_EXTENSION "")
-	   
-# FFLAGS depend on the compiler
+
+# Get the name of the Fortran compiler for easier decisions
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
@@ -227,11 +241,12 @@ elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
     set (CMAKE_Fortran_FLAGS_DEBUG   "/Qopenmp /Qdiag-disable:11082 /Qip")
     set (CMAKE_SHARED_LINKER_FLAGS "/ignore:4217 /ignore:4049")
   else()
-    set (CMAKE_Fortran_FLAGS_RELEASE "-O3 -qopenmp")
-    set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g -qopenmp")
+    set (CMAKE_Fortran_FLAGS "-qopenmp -assume byterecl")
+    set (CMAKE_Fortran_FLAGS_RELEASE "-O3")
+    set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g")
   endif()
 
-else (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+else ()
   message (STATUS "CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
   message (STATUS "Fortran compiler: " ${Fortran_COMPILER_NAME})
   message (STATUS "No optimized Fortran compiler flags are known.")
@@ -258,7 +273,6 @@ LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib"
 IF("${isSystemDir}" STREQUAL "-1")
    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 ENDIF("${isSystemDir}" STREQUAL "-1")
-
 
 include (${PROJECT_SOURCE_DIR}/Support/ExtLib/ExtLibraries.cmake)
 

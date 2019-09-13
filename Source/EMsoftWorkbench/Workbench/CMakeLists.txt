@@ -187,10 +187,8 @@ if(NOT APPLE)
     set(DEST_DIR "bin")
 endif()
 
-  
 GetHDF5LinkLibraries(EMSOFT)
 set(EXE_LINK_LIBRARIES 
-  ${EXE_LINK_LIBRARIES} 
   ${EMSOFT_hdf5LinkLibs} 
   EMsoftHDFLib 
   EMsoftLib 
@@ -198,13 +196,8 @@ set(EXE_LINK_LIBRARIES
   H5Support
   SIMPLib
   EbsdLib::EbsdLib
-
   )
 
-
-if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
-  set(EXE_LINK_LIBRARIES ${EXE_LINK_LIBRARIES} gomp gcc_eh)
-endif()
 
 BuildQtAppBundle(
     TARGET ${PROJECT_NAME}
@@ -237,6 +230,16 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE
     ${EbsdLib_INCLUDE_DIRS}
     )
+
+
+
+#   target_link_directories(${PROJECT_NAME} 
+#     PUBLIC "/Users/Shared/EMsoft_SDK/intel/mkl/lib/"
+#   )
+# set_target_properties(${PROJECT_NAME} 
+# PROPERTIES
+# INSTALL_RPATH "@loaderpath/../lib/mkl/someotherstuff/")
+
 
 # #- This installs all the help files. Note that we assume a flat directory structure
 # #- in the "Help" folder, ie, all html files, images, etc are all in the "Help"
