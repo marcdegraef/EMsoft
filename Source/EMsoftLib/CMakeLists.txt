@@ -166,24 +166,32 @@ set_target_properties (EMsoftLib_Cpp PROPERTIES
   FOLDER EMsoftPublic
 )
 
-#-------------------------------------------------------------------------------
-# On Windows we are NOT going to use FFTW (due to licensing) and instead use MKL
-if(WIN32)
-  set(FFTW3_LIBRARY ${MKL_LIBRARIES} )
-  set(FFTW3_INCLUDE_DIR ${MKL_FFTW_INCLUDE_DIR})
-endif()
 
-ADD_LIBRARY(EMsoftLib ${LIB_TYPE} ${EMsoftLib_SRCS})
-TARGET_LINK_LIBRARIES(EMsoftLib
+add_library(EMsoftLib ${LIB_TYPE} ${EMsoftLib_SRCS})
+target_link_libraries(EMsoftLib
                 EMsoftLib_C 
                 EMsoftLib_Cpp 
                 jsonfortran 
-                ${FFTW3_LIBRARY} 
                 ${OpenCL_LIBRARY}
                 bcls::bcls 
-                ${EMsoft_BLAS_LAPACK_LIBS}
-                ${IFORT_COMPILER_LIBRARIES}
-          )
+                
+               
+)
+if (Fortran_COMPILER_NAME MATCHES "ifort.*")
+  target_link_libraries(EMsoftLib
+                  ${MKL_LIBRARIES}
+  )
+endif()
+
+if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+  target_link_libraries(EMsoftLib
+                  ${FFTW3_LIBRARY} 
+                  ${EMsoft_BLAS_LAPACK_LIBS}
+                  ${EMsoft_FORTRAN_SUPPORT_LIBS}
+  )
+endif()
+
+
 target_include_directories(EMsoftLib PUBLIC ${CLFortran_INCLUDE_DIRS} ${FFTW3_INCLUDE_DIR})
 set_target_properties (EMsoftLib PROPERTIES
                   LINKER_LANGUAGE Fortran
