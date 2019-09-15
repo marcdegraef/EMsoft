@@ -6812,7 +6812,11 @@ use h5lt
 IMPLICIT NONE
 
 character(fnlen),INTENT(IN)                     :: dataset
+<<<<<<< HEAD
 type(HDFobjectStackType),INTENT(INOUT)          :: HDF_head
+=======
+type(HDFobjectStackType)        ,INTENT(INOUT)  :: HDF_head
+>>>>>>> corrects type on HDFsupport module
 !f2py intent(in,out) ::  HDFhead
 
 logical                                         :: itis
