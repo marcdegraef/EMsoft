@@ -61,51 +61,85 @@ endif()
 # We only support Intel Visual Fortran 2016 and newer since those have a sane
 # folder structure scheme. These next lines make sense on Windows Intel installs,
 # let's hope that their installations on Linux and macOS are about the same
-get_filename_component(IFORT_COMPILER_ROOT_DIR ${CMAKE_Fortran_COMPILER} DIRECTORY)
-get_filename_component(IFORT_COMPILER_ROOT_DIR ${IFORT_COMPILER_ROOT_DIR} DIRECTORY)
-#get_filename_component(IFORT_COMPILER_ROOT_DIR ${IFORT_COMPILER_ROOT_DIR} DIRECTORY)
-# message(STATUS "IFORT_COMPILER_ROOT_DIR: ${IFORT_COMPILER_ROOT_DIR}")
+if(NOT "${CMAKE_Fortran_COMPILER}" STREQUAL "")
+    get_filename_component(IFORT_COMPILER_ROOT_DIR ${CMAKE_Fortran_COMPILER} DIRECTORY)
+    get_filename_component(IFORT_COMPILER_ROOT_DIR ${IFORT_COMPILER_ROOT_DIR} DIRECTORY)
+    if(WIN32)
+        get_filename_component(IFORT_COMPILER_ROOT_DIR ${IFORT_COMPILER_ROOT_DIR} DIRECTORY)
+    endif()
+endif()
+
+
+#-------------------------------------------------------------------------------
+# Find the MKL_INCLUDE_DIR by finding known header files that MUST be present
 set(MKL_INCLUDE_SEARCH_DIRS
-    $ENV{MKLDIR}/include
-    "${IFORT_COMPILER_ROOT_DIR}/mkl/include"
     /opt/intel/mkl/include
     /opt/intel/cmkl/include
-    ${MKL_DIR}/include
 )
-
+if(NOT "$ENV{MKLDIR}" STREQUAL "")
+    set(MKL_INCLUDE_SEARCH_DIRS ${MKL_INCLUDE_SEARCH_DIRS} $ENV{MKLDIR}/include)
+endif()
+if(NOT "${IFORT_COMPILER_ROOT_DIR}" STREQUAL "")
+    set(MKL_INCLUDE_SEARCH_DIRS ${MKL_INCLUDE_SEARCH_DIRS} "${IFORT_COMPILER_ROOT_DIR}/mkl/include")
+endif()
+if(NOT "${MKL_DIR}" STREQUAL "")
+    set(MKL_INCLUDE_SEARCH_DIRS ${MKL_INCLUDE_SEARCH_DIRS} "${MKL_DIR}/include")
+endif()
+# message(STATUS "MKL_INCLUDE_SEARCH_DIRS: ${MKL_INCLUDE_SEARCH_DIRS}") 
 
 #-------------------------------------------------------------------------------
-# Find the MKL_INCLUDE_DIR by finding known header files that MUST be present
+# Find the C/C++ header version of MKL
 find_path(MKL_INCLUDE_DIR 
-        NAMES mkl.h
+        NAMES mkl.fi
         PATHS ${MKL_INCLUDE_SEARCH_DIRS}
 )
+if(NOT MKL_INCLUDE_DIR)
+    message(FATAL_ERROR "mklfih was not found. Is the C/C++ version of MKL installed? Looked in:\n   ${MKL_INCLUDE_SEARCH_DIRS} ")
+endif()
 
+
+#-------------------------------------------------------------------------------
+# Find the FFTW3_INCLUDE_DIR by finding known header files that MUST be present
 set(MKL_INCLUDE_SEARCH_DIRS
-    $ENV{MKLDIR}/include/fftw
-    "${IFORT_COMPILER_ROOT_DIR}/mkl/include/fftw"
     /opt/intel/mkl/include/fftw
     /opt/intel/cmkl/include/fftw
-    ${MKL_DIR}/include/fftw
-)       
-#-------------------------------------------------------------------------------
-# Find the MKL_INCLUDE_DIR by finding known header files that MUST be present
+)
+if(NOT "$ENV{MKLDIR}" STREQUAL "")
+    set(MKL_INCLUDE_SEARCH_DIRS ${MKL_INCLUDE_SEARCH_DIRS} $ENV{MKLDIR}/include/fftw)
+endif()
+if(NOT "${IFORT_COMPILER_ROOT_DIR}" STREQUAL "")
+    set(MKL_INCLUDE_SEARCH_DIRS ${MKL_INCLUDE_SEARCH_DIRS} "${IFORT_COMPILER_ROOT_DIR}/mkl/include/fftw")
+endif()
+if(NOT "${MKL_DIR}" STREQUAL "")
+    set(MKL_INCLUDE_SEARCH_DIRS ${MKL_INCLUDE_SEARCH_DIRS} "${MKL_DIR}/include/fftw")
+endif()
+# message(STATUS "MKL_INCLUDE_SEARCH_DIRS: ${MKL_INCLUDE_SEARCH_DIRS}")      
+
 find_path(FFTW3_INCLUDE_DIR 
         NAMES fftw3.f03
         PATHS ${MKL_INCLUDE_SEARCH_DIRS}
         )
-message(STATUS "FFTW3_INCLUDE_DIR: ${FFTW3_INCLUDE_DIR}")
+# message(STATUS "FFTW3_INCLUDE_DIR: ${FFTW3_INCLUDE_DIR}")
+
+
 #-------------------------------------------------------------------------------
 # Generate the directories that will get searched for the MKL and support libs
-get_filename_component(MKL_LIB_DIRS ${MKL_INCLUDE_DIR} DIRECTORY)
-set(MKL_LIB_DIRS "${MKL_LIB_DIRS}/lib")
+get_filename_component(MKL_LIB_DIR ${MKL_INCLUDE_DIR} DIRECTORY)
+set(MKL_LIB_DIR "${MKL_LIB_DIR}/lib")
+set(MKL_LIB_DIRS "${MKL_LIB_DIR}")
 if(NOT APPLE)
-    set(MKL_LIB_DIRS 
-            "${MKL_LIB_DIRS}/${MKL_ARCH_DIR}"
+    set(MKL_LIB_DIRS "${MKL_LIB_DIR}/${MKL_ARCH_DIR}")
+    if(NOT "${IFORT_COMPILER_ROOT_DIR}" STREQUAL "")
+        get_filename_component(IFORT_COMPILER_ROOT_DIR ${IFORT_COMPILER_ROOT_DIR} DIRECTORY)
+        set(MKL_LIB_DIRS 
+            "${MKL_LIB_DIRS}"
             "${IFORT_COMPILER_ROOT_DIR}/lib"  # MacOS and Linux(?)
-            "${IFORT_COMPILER_ROOT_DIR}/redist/${MKL_ARCH_DIR}/compiler"
-            )
+            "${IFORT_COMPILER_ROOT_DIR}/redist/${MKL_ARCH_DIR}/compiler" # Windows
+        )
+    endif()
 endif()
+# message(STATUS "MKL_LIB_DIRS: ${MKL_LIB_DIRS}")
+
 
 #-------------------------------------------------------------------------------
 # Clear the MKL_LIBRARIES Variable which will hold all the libraries
@@ -144,6 +178,10 @@ function(FindMKLLibrary)
     set(MKL_SearchName "${MKL_LIB_PREFIX}${MKL_PREFIX}${mkl_lib_name}${MKL_LIB_SUFFIX}")
     if(CMAKE_FIND_DEBUG_MODE)
         message(STATUS "MKL: Searching for ${MKL_SearchName}")
+        message(STATUS "MKL_LIB_DIRS:")
+        foreach(lib ${MKL_LIB_DIRS})
+            message(STATUS "    ${lib}")
+        endforeach(lib ${MKL_LIB_DIRS})
     endif()
     find_library(MKL_${mkl_lib_name}_LIBRARY
             NAMES ${MKL_SearchName}
@@ -160,7 +198,6 @@ endfunction(FindMKLLibrary)
 #
 #
 #-------------------------------------------------------------------------------
-
 
 #-------------------------------------------------------------------------------
 # Find the MKL_Core library
@@ -200,9 +237,11 @@ endforeach(f95IFace ${MKL_F95Interface})
 #-------------------------------------------------------------------------------
 # Find the OMP Library. We are going to grab the dynamic version per Intel's docs
 # advises against using the static version.
-set(MKL_LIB_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
-set(MKL_LIB_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
-FindMKLLibrary(NAME ${MKL_OpenMP_Library} PREFIX "")
+if(NOT WIN32)
+    set(MKL_LIB_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
+    set(MKL_LIB_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+    FindMKLLibrary(NAME ${MKL_OpenMP_Library} PREFIX "")
+endif()
 
 if(CMAKE_FIND_DEBUG_MODE )
     message(STATUS "MKL_LIBRARIES:")
@@ -210,7 +249,6 @@ if(CMAKE_FIND_DEBUG_MODE )
         message(STATUS "    ${lib}")
     endforeach(lib ${MKL_LIBRARIES})
 endif()
-
 
 if(1)
 else() # UNIX

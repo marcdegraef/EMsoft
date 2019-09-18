@@ -14,7 +14,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMDPFit.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMDPFit.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -23,7 +23,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMECPDI.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMECPDI.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -32,7 +32,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMEBSDDI.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMEBSDDI.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -41,7 +41,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMTKDDI.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMTKDDI.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -50,7 +50,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMFitOrientation.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMFitOrientation.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -59,7 +59,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMgetCTF.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMgetCTF.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -68,7 +68,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMgetANG.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMgetANG.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -77,7 +77,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMgetEulers.f90 
                       LINK_LIBRARIES ${EXE_LINK_LIBRARIES}
                       TEMPLATE ${TMPLT_DIR}/EMgetEulers.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -86,7 +86,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMEBSDDIpreview.f90 
                       LINK_LIBRARIES jsonfortran ${EXE_LINK_LIBRARIES}  
                       TEMPLATE ${TMPLT_DIR}/EMEBSDDIpreview.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )
@@ -95,7 +95,7 @@ if(EMsoft_ENABLE_HDF5_SUPPORT)
                       SOURCES ${APP_DIR}/EMEBSDDIchangesetting.f90 
                       LINK_LIBRARIES jsonfortran ${EXE_LINK_LIBRARIES}  
                       TEMPLATE ${TMPLT_DIR}/EMEBSDDIchangesetting.template 
-                      SOLUTION_FOLDER EMsoftPublic/Dictionaryindexing
+                      SOLUTION_FOLDER EMsoftPublic/DictionaryIndexing
                       INSTALL_PROGRAM TRUE
                       INCLUDE_DIRS ${EMsoftHDFLib_BINARY_DIR}
                       )

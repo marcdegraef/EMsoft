@@ -102,15 +102,10 @@ function(Add_EMsoft_Executable)
     SET_TARGET_PROPERTIES(${Z_TARGET} PROPERTIES FOLDER ${Z_SOLUTION_FOLDER})
   endif()
 
-  if(NOT "${Z_TEMPLATE}" STREQUAL "" AND NOT EXISTS ${Z_TEMPLATE})
-    message(STATUS "Missing Template File for Executable ${Z_TARGET}")
-    message(STATUS "  ${Z_TEMPLATE}")
-  # else()
-  #   install(FILES ${Z_TEMPLATE}
-  #     DESTINATION "NamelistTemplates"
-  #     COMPONENT Applications
-  #   )
-  endif()
+  # if(NOT "${Z_TEMPLATE}" STREQUAL "" AND NOT EXISTS ${Z_TEMPLATE})
+  #   message(STATUS "Missing Template File for Executable ${Z_TARGET}")
+  #   message(STATUS "  ${Z_TEMPLATE}")
+  # endif()
 
   foreach(idir ${Z_INCLUDE_DIRS})
     target_include_directories(${Z_TARGET} PUBLIC ${idir})
