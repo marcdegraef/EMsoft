@@ -79,7 +79,7 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   {
     if(!QFile::remove(tmpOutputFilePath))
     {
-      QString ss = QObject::tr("Error creating temporary output file '%1'").arg(tmpFi.fileName());
+      QString ss = QObject::tr("Error removing temporary output file '%1'").arg(tmpFi.fileName());
       emit errorMessageGenerated(ss);
       return;
     }
@@ -108,6 +108,7 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   // Create the CrystalData group
   if(!writer->openGroup(EMsoft::Constants::CrystalData))
   {
+    std::cout << "Error opening Group " << EMsoft::Constants::CrystalData.toStdString() << std::endl;
     QFile::remove(tmpOutputFilePath);
     return;
   }
@@ -121,8 +122,10 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   {
     iv += 1;
   }
-  if(!writer->writeScalarDataset(EMsoft::Constants::CrystalSystem, iv))
+  herr_t err = writer->writeScalarDataset(EMsoft::Constants::CrystalSystem, iv);
+  if(err < 0)
   {
+    std::cout << "Error writing Crystal System with value " << iv << " to data set " << EMsoft::Constants::CrystalSystem.toStdString() << std::endl;
     QFile::remove(tmpOutputFilePath);
     return;
   }

@@ -178,6 +178,8 @@ function(BuildQtAppBundle)
     endforeach()
 
 #-- Add and Link our executable
+set(GUI_TYPE "")
+
     add_executable( ${QAB_TARGET} ${GUI_TYPE} ${QAB_SOURCES} )
     target_link_libraries( ${QAB_TARGET}
                             ${QAB_LINK_LIBRARIES}

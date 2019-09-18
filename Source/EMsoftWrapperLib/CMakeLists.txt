@@ -32,7 +32,7 @@ set(EMsoftWrapperLib_HEADERS
 
 
 
-add_library(EMsoftWrapperLib ${LIB_TYPE} ${EMsoftWrapperLib_SOURCES})
+add_library(EMsoftWrapperLib ${LIB_TYPE} ${EMsoftWrapperLib_SOURCES} ${EMsoftWrapperLib_HEADERS})
 target_link_libraries(EMsoftWrapperLib EMsoftHDFLib)
 
 target_include_directories(EMsoftWrapperLib 

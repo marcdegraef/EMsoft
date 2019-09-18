@@ -984,6 +984,7 @@ cell%hexset = .FALSE.
 if (cell%xtal_system.eq.4) cell%hexset = .TRUE.
 if ((cell%xtal_system.eq.5).AND.(cell%SYM_SGset.ne.2)) cell%hexset = .TRUE.
 ! compute the metric matrices
+
  call CalcMatrices(cell)
 ! First generate the point symmetry matrices, then the actual space group.
 ! Get the symmorphic space group corresponding to the point group
@@ -1035,9 +1036,11 @@ delta = dble(nx)
 size_in_bytes = num_max*sizeof(EkeV)
 size_in_bytes_seeds = 4*globalworkgrpsz*globalworkgrpsz*sizeof(EkeV)
 numangle = int(ipar(15))
-
+write(*,*)'Here 1'
+write(*,*)'num_max: ',num_max
 ! next allocate and initialize a couple of arrays
 allocate(Lamresx(num_max), Lamresy(num_max), depthres(num_max), energyres(num_max), stat=istat)
+
 depthres = 0.0
 energyres = 0.0
 Lamresx = 0.0
@@ -1045,11 +1048,13 @@ Lamresy = 0.0
 accum_e = 0
 accum_z = 0
 
+
+write(*,*)'Here 2'
 !======================
 ! OpenCL INITIALIZATION
 !======================
 call CLinit_PDCCQ(platform, nump, int(ipar(7)), device, numd, int(ipar(6)), info, context, command_queue)
-
+write(*,*)'Here 3'
 !=====================
 ! BUILD THE KERNEL
 !=====================
@@ -1057,10 +1062,10 @@ call CLinit_PDCCQ(platform, nump, int(ipar(7)), device, numd, int(ipar(6)), info
 sourcefile='/EMMC.cl'
 emmcPath=trim(CS%OpenCLpathname)//trim(sourcefile)
 emmcPath=EMsoft_toNativePath(emmcPath)
-
+write(*,*)'Here 4'
 ! sourcefile = 'EMMC.cl'
 call CLread_source_file_wrapper(emmcPath, csource, slength)
-
+write(*,*)'Here 5'
 ! we disable all screen output; perhaps we can feed error messages back to the calling program...
 
 ! create the program
@@ -1068,7 +1073,7 @@ pcnt = 1
 psource = C_LOC(csource)
 prog = clCreateProgramWithSource(context, pcnt, C_LOC(psource), C_LOC(slength), ierr)
 ! if(ierr /= CL_SUCCESS) call FatalError("clCreateProgramWithSource: ",'Error: cannot create program from source.')
-
+write(*,*)'Here 6'
 ! build the program
 ierr = clBuildProgram(prog, numd, C_LOC(device), C_NULL_PTR, C_NULL_FUNPTR, C_NULL_PTR)
 if (ierr.le.0) then
@@ -1076,7 +1081,7 @@ if (ierr.le.0) then
   if(len(trim(source)) > 0) call Message(trim(source(1:cnum)),frm='(A)')
 endif
 ! if(ierr /= CL_SUCCESS) call FatalError("clBuildProgram: ",'Error: cannot build program.')
-
+write(*,*)'Here 7'
 ! get the compilation log
 ierr = clGetProgramBuildInfo(prog, device(ipar(6)), CL_PROGRAM_BUILD_LOG, sizeof(source), C_LOC(source), cnum)
 ! if(len(trim(source)) > 0) call Message(trim(source(1:cnum)),frm='(A)')
@@ -1084,12 +1089,12 @@ ierr = clGetProgramBuildInfo(prog, device(ipar(6)), CL_PROGRAM_BUILD_LOG, sizeof
 
 ! if we get here, then the program build was successful and we can proceed with the creation of the kernel
 ! call Message('Program Build Successful... Creating kernel')
-
+write(*,*)'Here 8'
 ! finally get the kernel and release the program
 kernelname = 'MC'//CHAR(0)
 kernel = clCreateKernel(prog, C_LOC(kernelname), ierr)
 ! if(ierr /= CL_SUCCESS) call FatalError("clCreateKernel: ",'Error creating kernel MC.')
-
+write(*,*)'Here 9'
 ierr = clReleaseProgram(prog)
 ! if(ierr /= CL_SUCCESS) call FatalError("clReleaseProgram: ",'Error releasing program.')
 
@@ -1098,7 +1103,7 @@ read(iunit) nseeds
 allocate(rnseeds(nseeds))
 read(iunit) rnseeds
 close(unit=iunit,status='keep')
-
+write(*,*)'Here 10'
 ! the next error needs to be checked in the calling program
 ! if (globalworkgrpsz**2 .gt. nseeds) call FatalError('EMMCOpenCL:','insufficient prime numbers')
 
@@ -1111,23 +1116,23 @@ do i = 1,globalworkgrpsz
         end do
     end do
 end do
-
+write(*,*)'Here 11'
 ! create device memory buffers
 LamX = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
 ! if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for LamX.')
-
+write(*,*)'Here 12'
 LamY = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
 ! if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for LamY.')
-
+write(*,*)'Here 13'
 depth = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
 !   if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for depth.')
-
+write(*,*)'Here 14'
 energy = clCreateBuffer(context, CL_MEM_WRITE_ONLY, size_in_bytes, C_NULL_PTR, ierr)
 !   if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for energy.')
-
+write(*,*)'Here 15'
 seeds = clCreateBuffer(context, CL_MEM_READ_WRITE, size_in_bytes, C_NULL_PTR, ierr)
 ! if(ierr /= CL_SUCCESS) call FatalError('clCreateBuffer: ','cannot allocate device memory for seeds.')
-
+write(*,*)'Here 16'
 ierr = clEnqueueWriteBuffer(command_queue, seeds, CL_TRUE, 0_8, size_in_bytes_seeds, C_LOC(init_seeds(1)), &
                             0, C_NULL_PTR, C_NULL_PTR)
 ! if(ierr /= CL_SUCCESS) call FatalError('clEnqueueWriteBuffer: ','cannot Enqueue write buffer.')

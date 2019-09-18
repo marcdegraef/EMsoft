@@ -245,10 +245,17 @@ void MonteCarloSimulationController::createMonteCarlo(MonteCarloSimulationContro
 
   if(!dir.cd("opencl"))
   {
-    std::cout << "Unable to find opencl folder at path" << std::endl;
+	  // Try going up one more directory: This might be the case when compiling with Visual Studio
+#if defined(Q_OS_WIN)
+    dir.cdUp();
+#endif
+    if(!dir.cd("opencl"))
+    {
+        std::cout << "Unable to find opencl folder at path" << std::endl;
     // We are not able to find the opencl folder, so throw an error and bail
     errorMessageGenerated(tr("Unable to find opencl folder at path '%1'").arg(openCLPath));
     return;
+	}
   }
 
   emit stdOutputMessageGenerated(tr("Found opencl folder path: %1").arg(dir.absolutePath()));
@@ -261,9 +268,16 @@ void MonteCarloSimulationController::createMonteCarlo(MonteCarloSimulationContro
 
   if(!dir.cd("resources"))
   {
-    // We are not able to find the resources folder, so throw an error and bail
-    errorMessageGenerated(tr("Unable to find resources folder at path '%1'").arg(randomSeedsPath));
-    return;
+  // Try going up one more directory: This might be the case when compiling with Visual Studio
+#if defined(Q_OS_WIN)
+	  dir.cdUp();
+#endif
+	  if(!dir.cd("resources"))
+	  {
+		// We are not able to find the resources folder, so throw an error and bail
+		errorMessageGenerated(tr("Unable to find resources folder at path '%1'").arg(randomSeedsPath));
+		return;
+	  }
   }
 
   emit stdOutputMessageGenerated(tr("Found resources folder path: %1").arg(dir.absolutePath()));
@@ -297,6 +311,9 @@ void MonteCarloSimulationController::createMonteCarlo(MonteCarloSimulationContro
   //    }
   //    printf("\n");
   //  }
+
+  std::cout << "iParPtr.data(): " << iParPtr.size() << "    fParPtr.data(): " << fParPtr.size() <<    "    m_SPar: " << m_SPar << "      atomPos.data(): " << atomPos.size() << std::endl;
+
 
   EMsoftCgetMCOpenCL(iParPtr.data(), fParPtr.data(), m_SPar, atomPos.data(), atomTypes.data(), latParm.data(), m_GenericAccumePtr.data(), m_GenericAccumzPtr.data(),
                      &MonteCarloSimulationControllerProgress, m_InstanceKey, &m_Cancel);
@@ -1253,8 +1270,12 @@ QString MonteCarloSimulationController::getEMsoftUserLocation() const
 std::vector<int32_t> MonteCarloSimulationController::getIParPtr(MonteCarloSimulationController::MonteCarloSimulationData simData) const
 {
   std::vector<int32_t> iParPtr = m_XtalReader->getIParPtr();
+  if(iParPtr.empty())
+  {
+    return iParPtr;
+  }
 
-  iParPtr[0] = static_cast<int>((simData.numOfPixelsN - 1) / 2);                        // number of pixels along x
+  iParPtr[0] = static_cast<int>((simData.numOfPixelsN - 1) / 2);                      // number of pixels along x
   iParPtr[1] = static_cast<int>(simData.globalWorkGroupSize);                           // global work group size
   iParPtr[2] = static_cast<int>(simData.numOfEPerWorkitem);                             // number of electrons in work group
   iParPtr[3] = static_cast<int>(simData.totalNumOfEConsidered);                         // total number of electrons in single MCstep
@@ -1327,4 +1348,3 @@ bool MonteCarloSimulationController::getCancel() const
 {
   return m_Cancel;
 }
-
