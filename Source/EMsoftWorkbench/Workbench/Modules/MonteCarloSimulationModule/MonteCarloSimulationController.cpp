@@ -302,18 +302,45 @@ void MonteCarloSimulationController::createMonteCarlo(MonteCarloSimulationContro
   {
     return;
   }
+#if 0
+  std::cout << "IPar---------" << std::endl;
+  for(size_t i = 0; i < EMsoftWorkbenchConstants::Constants::IParSize; i++)
+  {
+    std::cout << i << "  " << iParPtr[i] << std::endl;
+  }
+  std::cout << "FPar---------" << std::endl;
+  for(size_t i = 0; i < EMsoftWorkbenchConstants::Constants::FParSize; i++)
+  {
+    std::cout << i << "  " << fParPtr[i] << std::endl;
+  }
 
-  //  for (int i = 0; i < EMsoftWorkbenchConstants::Constants::SParSize; i++)
-  //  {
-  //    for (int j = 0; j < EMsoftWorkbenchConstants::Constants::SParStringSize; j++)
-  //    {
-  //      printf("%x ", m_SPar[i*EMsoftWorkbenchConstants::Constants::SParStringSize + j]);
-  //    }
-  //    printf("\n");
-  //  }
+  for(size_t i = 0; i < EMsoftWorkbenchConstants::Constants::SParSize; i++)
+  {
+    printf("(%zd) %s\n", i, m_SPar + i * EMsoftWorkbenchConstants::Constants::SParStringSize);
+  }
+  printf("\n");
+  std::flush(std::cout);
+  std::cout << "atomPos---------" << std::endl;
+  for(size_t i = 0; i < atomPos.size(); i++)
+  {
+    std::cout << i << "  " << atomPos[i] << std::endl;
+  }
+  std::cout << "atomTypes---------" << std::endl;
+  for(size_t i = 0; i < atomTypes.size(); i++)
+  {
+    std::cout << i << "  " << atomTypes[i] << std::endl;
+  }
+  std::cout << "latParm---------" << std::endl;
+  for(size_t i = 0; i < latParm.size(); i++)
+  {
+    std::cout << i << "  " << latParm[i] << std::endl;
+  }
+
+  std::cout << "m_GenericAccumePtr.size() = " << m_GenericAccumePtr.size() << std::endl;
+  std::cout << "m_GenericAccumzPtr.size() = " << m_GenericAccumzPtr.size() << std::endl;
 
   std::cout << "iParPtr.data(): " << iParPtr.size() << "    fParPtr.data(): " << fParPtr.size() <<    "    m_SPar: " << m_SPar << "      atomPos.data(): " << atomPos.size() << std::endl;
-
+#endif
 
   EMsoftCgetMCOpenCL(iParPtr.data(), fParPtr.data(), m_SPar, atomPos.data(), atomTypes.data(), latParm.data(), m_GenericAccumePtr.data(), m_GenericAccumzPtr.data(),
                      &MonteCarloSimulationControllerProgress, m_InstanceKey, &m_Cancel);
@@ -345,17 +372,18 @@ void MonteCarloSimulationController::createMonteCarlo(MonteCarloSimulationContro
 // -----------------------------------------------------------------------------
 bool MonteCarloSimulationController::setSParValue(StringType type, const QString& value)
 {
-  int stringSize = EMsoftWorkbenchConstants::Constants::SParStringSize;
+  size_t stringSize = static_cast<size_t>(EMsoftWorkbenchConstants::Constants::SParStringSize);
   if(value.size() > stringSize)
   {
     errorMessageGenerated(tr("The string '%1' is longer than %2 characters").arg(value).arg(EMsoftWorkbenchConstants::Constants::SParStringSize));
     return false;
   }
 
-  int index = static_cast<int>(type);
+  QByteArray byteArray = value.toLatin1();
+  size_t index = static_cast<size_t>(type);
 
-  char* valueArray = value.toLatin1().data();
-  std::memcpy(m_SPar + (index * stringSize), valueArray, value.size());
+  char* offsetPtr = m_SPar + (index * stringSize);
+  std::memcpy(offsetPtr, byteArray.data(), static_cast<size_t>(byteArray.size()));
   return true;
 }
 
@@ -385,9 +413,9 @@ void MonteCarloSimulationController::initializeData(MonteCarloSimulationControll
   {
     // allocate space for the Accume and Accumz arrays, which will subsequently be filled by the EMsoftCgetMCOpenCL code.
     size_t size = 1;
-    size = size * static_cast<int>((data.acceleratingVoltage - data.minEnergyConsider) / data.energyBinSize + 1);
-    size = size * data.numOfPixelsN;
-    size = size * data.numOfPixelsN;
+    size = size * (static_cast<int>((data.acceleratingVoltage - data.minEnergyConsider) / data.energyBinSize + 1));
+    size = size * (data.numOfPixelsN);
+    size = size * (data.numOfPixelsN);
 
     m_GenericAccumePtr.resize(size);
     std::fill(m_GenericAccumePtr.begin(), m_GenericAccumePtr.end(), 0);
@@ -401,9 +429,9 @@ void MonteCarloSimulationController::initializeData(MonteCarloSimulationControll
     {
       size = size * static_cast<size_t>((data.sampleEndTiltAngle - data.sampleStartTiltAngle) / data.sampleTiltStepSize + 1);
     }
-    size = size * static_cast<int>(data.maxDepthConsider / data.depthStepSize + 1);
-    size = size * (data.numOfPixelsN - 1) / 10 + 1;
-    size = size * (data.numOfPixelsN - 1) / 10 + 1;
+    size = size * (static_cast<int>(data.maxDepthConsider / data.depthStepSize + 1));
+    size = size * ((data.numOfPixelsN - 1) / 10 + 1);
+    size = size * ((data.numOfPixelsN - 1) / 10 + 1);
 
     m_GenericAccumzPtr.resize(size);
     std::fill(m_GenericAccumzPtr.begin(), m_GenericAccumzPtr.end(), 0);

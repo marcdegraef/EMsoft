@@ -36,14 +36,14 @@
 #include "ADPMapController.h"
 
 //#include "EMsoftWrapperLib/DictionaryIndexing/EMsoftDIwrappers.h"
-
-#include <QtCore/QMimeDatabase>
-#include <QtCore/QDateTime>
-#include <QtCore/QThread>
-#include <QtCore/QMap>
 #include <QtCore/QCoreApplication>
-#include <QtCore/QTextStream>
+#include <QtCore/QDateTime>
+#include <QtCore/QDebug>
+#include <QtCore/QMap>
+#include <QtCore/QMimeDatabase>
 #include <QtCore/QSharedPointer>
+#include <QtCore/QTextStream>
+#include <QtCore/QThread>
 
 #include <QtGui/QImage>
 
@@ -88,12 +88,18 @@ ADPMapController::~ADPMapController()
 }
 
 // -----------------------------------------------------------------------------
+void ADPMapController::setData(const ADPMapData& data)
+{
+  m_Data = data;
+}
+
+// -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void ADPMapController::createADPMap(const ADPMapData &data)
+void ADPMapController::createADPMap()
 {
   initializeData();
-
+  ADPMapData& data = m_Data;
   std::vector<int32_t> iParVector = data.getIParVector();
   std::vector<float> fParVector = data.getFParVector();
   std::vector<char> sParVector = data.getSParVector();

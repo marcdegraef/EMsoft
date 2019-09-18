@@ -103,7 +103,7 @@ void XtalFileReader::initializeData()
 // -----------------------------------------------------------------------------
 bool XtalFileReader::closeFile()
 {
-  if (static_cast<bool>(QH5Utilities::closeFile(m_FileId)))
+  if(QH5Utilities::closeFile(m_FileId) >= 0)
   {
     initializeData();
     m_FileId = -1;
