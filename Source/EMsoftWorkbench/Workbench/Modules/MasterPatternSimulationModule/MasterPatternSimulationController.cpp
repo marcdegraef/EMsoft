@@ -234,17 +234,18 @@ void MasterPatternSimulationController::createMasterPattern(MasterPatternSimulat
   if(!m_Cancel)
   {
     bool success = writeEMsoftHDFFile(simData);
+
     if(!success)
     {
-      emit stdOutputMessageGenerated("Master Pattern File Generation Failed");
-      return;
+      emit stdOutputMessageGenerated("Master Pattern File Write Failed");
     }
-
-    emit stdOutputMessageGenerated("Master Pattern File Generation Complete");
+    else
+    {
+      emit stdOutputMessageGenerated("Master Pattern File Write Complete");
+    }
   }
   else
   {
-    m_MonteCarloReader->closeFile();
     emit stdOutputMessageGenerated("Master Pattern File Generation was successfully canceled");
   }
 }
@@ -353,7 +354,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   {
     if(!QFile::remove(tmpOutputFilePath))
     {
-      QString ss = QObject::tr("Error creating temporary output file '%1'").arg(tmpFi.fileName());
+      QString ss = QObject::tr("Error removing temporary output file '%1'").arg(tmpFi.fileName());
       emit errorMessageGenerated(ss);
       return false;
     }
@@ -361,7 +362,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
   if(!QFile::copy(inputFilePath, tmpOutputFilePath))
   {
-    QString ss = QObject::tr("Error creating temporary output file '%1'").arg(tmpFi.fileName());
+    QString ss = QObject::tr("Error copying input to temporary output file '%1'").arg(tmpFi.fileName());
     emit errorMessageGenerated(ss);
     return false;
   }
@@ -830,12 +831,23 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     return false;
   }
 
+  if(!m_MonteCarloReader->closeFile())
+  {
+    QString ss = QObject::tr("Input file was not closed.");
+    emit errorMessageGenerated(ss);
+    return false;
+  }
+
   QFileInfo outFi(outputFilePath);
   if(outFi.exists())
   {
-    if(!QFile::remove(outputFilePath))
+    std::cout << "outputFilePath: " << outputFilePath.toStdString() << std::endl;
+    QFile fud(outputFilePath);
+    if(!fud.remove())
     {
-      QString ss = QObject::tr("Error replacing output file '%1'").arg(outFi.fileName());
+      std::cout << "Error String: " << fud.errorString().toStdString() << std::endl;
+
+      QString ss = QObject::tr("Error deleting existing output file. Error reported was: '%1'").arg(fud.errorString());
       emit errorMessageGenerated(ss);
       QFile::remove(tmpOutputFilePath);
       return false;
@@ -844,7 +856,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
   if(!QFile::rename(tmpOutputFilePath, outputFilePath))
   {
-    QString ss = QObject::tr("Error replacing output file '%1'").arg(outFi.fileName());
+    QString ss = QObject::tr("Error renaming temp file to output file '%1' -> '%2'").arg(tmpOutputFilePath).arg(outputFilePath);
     emit errorMessageGenerated(ss);
     QFile::remove(tmpOutputFilePath);
     return false;

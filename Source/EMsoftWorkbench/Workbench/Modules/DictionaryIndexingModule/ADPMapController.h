@@ -92,11 +92,7 @@ public:
     std::vector<char> getSParVector() const;
   };
 
-  /**
-   * @brief createADPMap
-   * @param data
-   */
-  void createADPMap(const ADPMapData &data);
+  void setData(const ADPMapData& data);
 
   /**
    * @brief setUpdateProgress
@@ -111,6 +107,13 @@ public:
      */
   int getNumCPUCores();
 
+public slots:
+  /**
+   * @brief createADPMap
+   * @param data
+   */
+  void createADPMap();
+
 protected slots:
   void listenADPMapFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
@@ -122,6 +125,7 @@ signals:
 
 private:
   QString m_StartTime = "";
+  ADPMapData m_Data;
 
   std::vector<float> m_OutputMaskVector;
   std::vector<float> m_OutputIQMapVector;
