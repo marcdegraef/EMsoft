@@ -55,7 +55,7 @@ class H5Support_EXPORT H5ScopedFileSentinel
 {
   public:
     H5ScopedFileSentinel(hid_t* fileId, bool turnOffErrors);
-    virtual ~H5ScopedFileSentinel();
+    ~H5ScopedFileSentinel();
 
     void setFileId(hid_t* fileId);
     hid_t* getFileId();
@@ -68,13 +68,19 @@ class H5Support_EXPORT H5ScopedFileSentinel
 
     herr_t (*_oldHDF_error_func)(hid_t, void*){};
     void* _oldHDF_error_client_data{};
+
+  public:
+    H5ScopedFileSentinel(const H5ScopedFileSentinel&) = delete;            // Copy Constructor Not Implemented
+    H5ScopedFileSentinel(H5ScopedFileSentinel&&) = delete;                 // Move Constructor Not Implemented
+    H5ScopedFileSentinel& operator=(const H5ScopedFileSentinel&) = delete; // Copy Assignment Not Implemented
+    H5ScopedFileSentinel& operator=(H5ScopedFileSentinel&&) = delete;      // Move Assignment Not Implemented
 };
 
 class H5Support_EXPORT H5ScopedGroupSentinel
 {
   public:
     H5ScopedGroupSentinel(hid_t* gid, bool turnOffErrors);
-    virtual ~H5ScopedGroupSentinel();
+    ~H5ScopedGroupSentinel();
     void addGroupId(hid_t* gid);
 
   private:
@@ -83,6 +89,12 @@ class H5Support_EXPORT H5ScopedGroupSentinel
 
     herr_t (*_oldHDF_error_func)(hid_t, void*){};
     void* _oldHDF_error_client_data{};
+
+  public:
+    H5ScopedGroupSentinel(const H5ScopedGroupSentinel&) = delete;            // Copy Constructor Not Implemented
+    H5ScopedGroupSentinel(H5ScopedGroupSentinel&&) = delete;                 // Move Constructor Not Implemented
+    H5ScopedGroupSentinel& operator=(const H5ScopedGroupSentinel&) = delete; // Copy Assignment Not Implemented
+    H5ScopedGroupSentinel& operator=(H5ScopedGroupSentinel&&) = delete;      // Move Assignment Not Implemented
 };
 
 
@@ -90,7 +102,7 @@ class H5Support_EXPORT H5ScopedObjectSentinel
 {
   public:
     H5ScopedObjectSentinel(hid_t* gid, bool turnOffErrors);
-    virtual ~H5ScopedObjectSentinel();
+    ~H5ScopedObjectSentinel();
     void addGroupId(hid_t* gid);
 
   private:
@@ -99,6 +111,12 @@ class H5Support_EXPORT H5ScopedObjectSentinel
 
     herr_t (*_oldHDF_error_func)(hid_t, void*){};
     void* _oldHDF_error_client_data{};
+
+  public:
+    H5ScopedObjectSentinel(const H5ScopedObjectSentinel&) = delete;            // Copy Constructor Not Implemented
+    H5ScopedObjectSentinel(H5ScopedObjectSentinel&&) = delete;                 // Move Constructor Not Implemented
+    H5ScopedObjectSentinel& operator=(const H5ScopedObjectSentinel&) = delete; // Copy Assignment Not Implemented
+    H5ScopedObjectSentinel& operator=(H5ScopedObjectSentinel&&) = delete;      // Move Assignment Not Implemented
 };
 
 class H5Support_EXPORT H5GroupAutoCloser
@@ -106,7 +124,14 @@ class H5Support_EXPORT H5GroupAutoCloser
 public:
   H5GroupAutoCloser(hid_t* groupId);
 
-  virtual ~H5GroupAutoCloser();
+  ~H5GroupAutoCloser();
+
+public:
+  H5GroupAutoCloser(const H5GroupAutoCloser&) = delete;            // Copy Constructor Not Implemented
+  H5GroupAutoCloser(H5GroupAutoCloser&&) = delete;                 // Move Constructor Not Implemented
+  H5GroupAutoCloser& operator=(const H5GroupAutoCloser&) = delete; // Copy Assignment Not Implemented
+  H5GroupAutoCloser& operator=(H5GroupAutoCloser&&) = delete;      // Move Assignment Not Implemented
+
 private:
   hid_t* gid = nullptr;
 };

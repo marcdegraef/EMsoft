@@ -38,17 +38,19 @@ include_directories(${SHTfile_BINARY_DIR})
 
 #------------------------------------------------------------------------------
 # Setup all the source files
-
 set(EMsoftLib_SRCS
-  ${EMsoftLib_SOURCE_DIR}/bobyqa.f90
+  ${EMsoftLib_SOURCE_DIR}/bmp.f90
   ${EMsoftLib_SOURCE_DIR}/bobyqa_refinement.f90
+  ${EMsoftLib_SOURCE_DIR}/bobyqa.f90
   ${EMsoftLib_SOURCE_DIR}/CLsupport.f90
   ${EMsoftLib_SOURCE_DIR}/configmod.f90
   ${EMsoftLib_SOURCE_DIR}/constants.f90
   ${EMsoftLib_SOURCE_DIR}/crystal.f90
   ${EMsoftLib_SOURCE_DIR}/defectmodule.f90
+  ${EMsoftLib_SOURCE_DIR}/detectors.f90
   ${EMsoftLib_SOURCE_DIR}/dictmod.f90
   ${EMsoftLib_SOURCE_DIR}/diffraction.f90
+  ${EMsoftLib_SOURCE_DIR}/diffractionQC.f90
   ${EMsoftLib_SOURCE_DIR}/distortion.f90
   ${EMsoftLib_SOURCE_DIR}/ECCImod.f90
   ${EMsoftLib_SOURCE_DIR}/eispack.f90
@@ -57,16 +59,26 @@ set(EMsoftLib_SRCS
   ${EMsoftLib_SOURCE_DIR}/fftw3mod.f90
   ${EMsoftLib_SOURCE_DIR}/files.f90
   ${EMsoftLib_SOURCE_DIR}/filters.f90
+  ${EMsoftLib_SOURCE_DIR}/GBmod.f90
   ${EMsoftLib_SOURCE_DIR}/graphics.f90
   ${EMsoftLib_SOURCE_DIR}/gvectors.f90
+  ${EMsoftLib_SOURCE_DIR}/gvectorsQC.f90
+  ${EMsoftLib_SOURCE_DIR}/hhmod.f90
+  ${EMsoftLib_SOURCE_DIR}/image_io.f90
+  ${EMsoftLib_SOURCE_DIR}/image.f90
+  ${EMsoftLib_SOURCE_DIR}/imageOPs.f90
   ${EMsoftLib_SOURCE_DIR}/Indexingmod.f90
   ${EMsoftLib_SOURCE_DIR}/initializers.f90
   ${EMsoftLib_SOURCE_DIR}/io.f90
   ${EMsoftLib_SOURCE_DIR}/JSONsupport.f90
   ${EMsoftLib_SOURCE_DIR}/kvectors.f90
+  ${EMsoftLib_SOURCE_DIR}/kvectorsQC.f90
   ${EMsoftLib_SOURCE_DIR}/Lambert.f90
+  ${EMsoftLib_SOURCE_DIR}/Laue.f90
+  ${EMsoftLib_SOURCE_DIR}/lzw.f90
   ${EMsoftLib_SOURCE_DIR}/math.f90
   ${EMsoftLib_SOURCE_DIR}/MBmodule.f90
+  ${EMsoftLib_SOURCE_DIR}/MBmoduleQC.f90
   ${EMsoftLib_SOURCE_DIR}/MRCmod.f90
   ${EMsoftLib_SOURCE_DIR}/MuellerCalculus.f90
   ${EMsoftLib_SOURCE_DIR}/multibeams.f90
@@ -77,17 +89,13 @@ set(EMsoftLib_SRCS
   ${EMsoftLib_SOURCE_DIR}/others.f90
   ${EMsoftLib_SOURCE_DIR}/PEDmod.f90
   ${EMsoftLib_SOURCE_DIR}/PFInversionmod.f90
-  ${EMsoftLib_SOURCE_DIR}/GBmod.f90
   ${EMsoftLib_SOURCE_DIR}/pgm.f90
   ${EMsoftLib_SOURCE_DIR}/postscript.f90
   ${EMsoftLib_SOURCE_DIR}/povray.f90
   ${EMsoftLib_SOURCE_DIR}/QCmod.f90
   ${EMsoftLib_SOURCE_DIR}/qcrystal.f90
-  ${EMsoftLib_SOURCE_DIR}/diffractionQC.f90
-  ${EMsoftLib_SOURCE_DIR}/MBmoduleQC.f90
-  ${EMsoftLib_SOURCE_DIR}/kvectorsQC.f90
-  ${EMsoftLib_SOURCE_DIR}/gvectorsQC.f90
   ${EMsoftLib_SOURCE_DIR}/quaternions.f90
+  ${EMsoftLib_SOURCE_DIR}/random.f90
   ${EMsoftLib_SOURCE_DIR}/rng.f90
   ${EMsoftLib_SOURCE_DIR}/rotations.f90
   ${EMsoftLib_SOURCE_DIR}/simulated_annealing.f90
@@ -95,15 +103,10 @@ set(EMsoftLib_SRCS
   ${EMsoftLib_SOURCE_DIR}/spsort.f
   ${EMsoftLib_SOURCE_DIR}/STEMmodule.f90
   ${EMsoftLib_SOURCE_DIR}/symmetry.f90
+  ${EMsoftLib_SOURCE_DIR}/tif.f90
   ${EMsoftLib_SOURCE_DIR}/tiff.f90
   ${EMsoftLib_SOURCE_DIR}/timing.f90
   ${EMsoftLib_SOURCE_DIR}/typedefs.f90
-  ${EMsoftLib_SOURCE_DIR}/image.f90
-  ${EMsoftLib_SOURCE_DIR}/image_io.f90
-  ${EMsoftLib_SOURCE_DIR}/bmp.f90
-  ${EMsoftLib_SOURCE_DIR}/tif.f90
-  ${EMsoftLib_SOURCE_DIR}/lzw.f90
-  ${EMsoftLib_SOURCE_DIR}/Laue.f90
   ${EMsoftLib_SOURCE_DIR}/xrd.f90
   ${EMsoftLib_SOURCE_DIR}/random.f90
   ${EMsoftLib_SOURCE_DIR}/imageOPs.f90
@@ -197,9 +200,20 @@ set_target_properties (EMsoftLib PROPERTIES
                   LINKER_LANGUAGE Fortran
                    # Fortran_MODULE_DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}
                   FOLDER EMsoftPublic
-)
+                  )
 set_source_files_properties(${EMsoftLib_BINARY_DIR}/stringconstants.f90 PROPERTIES GENERATED TRUE)
-add_dependencies(EMsoftLib EMsoftLib_Generate_StringConstants )
+add_dependencies(EMsoftLib EMsoftLib_Generate_StringConstants)
+
+# On Windows we need a few extra compile and linker flags. By making these PUBLIC they should
+# flow down to every dependent target 
+if(WIN32)
+  target_compile_options(EMsoftLib PUBLIC 
+                          $<$<COMPILE_LANGUAGE:Fortran>:/assume:byterecl>
+                          $<$<COMPILE_LANGUAGE:Fortran>:/Qopenmp>
+                          $<$<COMPILE_LANGUAGE:Fortran>:/Qdiag-disable:11082>
+                          $<$<COMPILE_LANGUAGE:Fortran>:/Qip>)
+  target_link_options(EMsoftLib PUBLIC /STACK:2000000000 /machine:x64)
+endif()
 
 if(APPLE AND BUILD_SHARED_LIBS)
   # set_target_properties(EMsoftLib PROPERTIES MACOSX_RPATH TRUE)

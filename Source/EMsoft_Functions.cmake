@@ -110,10 +110,6 @@ function(Add_EMsoft_Executable)
   foreach(idir ${Z_INCLUDE_DIRS})
     target_include_directories(${Z_TARGET} PUBLIC ${idir})
   endforeach(idir )
-  
-  if(WIN32)
-    target_compile_options(${Z_TARGET} PUBLIC /Qopenmp PUBLIC /Qdiag-disable:11082 PUBLIC /Qip)
-  endif()
 
   set_target_properties(${Z_TARGET} PROPERTIES BUILD_RPATH "${EMsoft_OpenMP_LIB_DIR}")
 
