@@ -230,7 +230,7 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE
     ${EbsdLib_INCLUDE_DIRS}
     )
-
+#target_compile_options(${PROJECT_NAME} BEFORE PUBLIC $<$<CONFIG:Debug>:/DEBUG:FULL> )
 
 
 #   target_link_directories(${PROJECT_NAME} 

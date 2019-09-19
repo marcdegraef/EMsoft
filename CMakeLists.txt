@@ -92,11 +92,22 @@ if("${EMsoft_RELEASE_TYPE}" STREQUAL "")
   set(EMsoft_RELEASE_TYPE "Development")  # <============ SET THIS FOR RELEASE
   set_property(GLOBAL PROPERTY PACKAGE_RELEASE_TYPE "${EMsoft_RELEASE_TYPE}")
 endif()
-#
+
+
+if (NOT DEFINED CMP_SOURCE_DIR)
+  set(CMP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Support/cmp)
+endif()
+include (${CMP_SOURCE_DIR}/cmpCMakeMacros.cmake )
+
 # Next up, Set the version of EMsoft that is used through out the project.
+
 set(EMsoft_VER_MAJOR "5")
 set(EMsoft_VER_MINOR "0")
 set(EMsoft_VER_PATCH "0")
+cmpGenerateBuildDate(PROJECT_NAME EMsoft)
+string(REPLACE "/" "" EMsoft_VER_PATCH ${EMsoft_BUILD_DATE})
+#message(STATUS "EMsoft_BUILD_DATE: ${EMsoft_BUILD_DATE}")
+
 #------------------------------------------------------------------------------
 
 project (EMsoft LANGUAGES C CXX Fortran VERSION ${EMsoft_VER_MAJOR}.${EMsoft_VER_MINOR}.${EMsoft_VER_PATCH}.0)
@@ -138,7 +149,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Build shared libraries
 OPTION(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 if(WIN32)
-  set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+  #set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 endif()
 set(LIB_TYPE STATIC)
 if(BUILD_SHARED_LIBS)
@@ -170,9 +181,7 @@ if("${EMsoftSearchDirs}" STREQUAL "")
 endif()
 
 
-if (NOT DEFINED CMP_SOURCE_DIR)
-  set(CMP_SOURCE_DIR ${EMsoft_SOURCE_DIR}/Support/cmp)
-endif()
+
 
 # Set the Application Name to with the correct icons and badges
 set(CMP_HEADER_DIR ${EMsoft_BINARY_DIR})
@@ -237,8 +246,8 @@ elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
   # ifort (untested)
 
   if(WIN32)
-    set (CMAKE_Fortran_FLAGS_RELEASE "/Qopenmp /Qdiag-disable:11082 /Qip")
-    set (CMAKE_Fortran_FLAGS_DEBUG   "/Qopenmp /Qdiag-disable:11082 /Qip")
+    # set (CMAKE_Fortran_FLAGS_RELEASE "/Qopenmp /Qdiag-disable:11082 /Qip")
+    # set (CMAKE_Fortran_FLAGS_DEBUG   "/Qopenmp /Qdiag-disable:11082 /Qip")
     set (CMAKE_SHARED_LINKER_FLAGS "/ignore:4217 /ignore:4049")
   else()
     set (CMAKE_Fortran_FLAGS "-qopenmp -assume byterecl")
