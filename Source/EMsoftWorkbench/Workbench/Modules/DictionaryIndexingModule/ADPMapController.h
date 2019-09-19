@@ -122,6 +122,7 @@ signals:
   void warningMessageGenerated(const QString& msg) const;
   void errorMessageGenerated(const QString& msg) const;
   void stdOutputMessageGenerated(const QString& msg) const;
+  void finished();
 
 private:
   QString m_StartTime = "";
