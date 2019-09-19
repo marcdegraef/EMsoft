@@ -146,6 +146,8 @@ void ADPMapController::createADPMap()
     // ADPMapController::createADPMap is currently on a separate thread, so the GUI will continue to operate normally
     avgDotProductMapProcess->waitForFinished(-1);
   }
+
+  emit finished();
 }
 
 // -----------------------------------------------------------------------------

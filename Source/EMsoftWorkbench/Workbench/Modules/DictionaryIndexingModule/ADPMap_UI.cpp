@@ -298,15 +298,17 @@ void ADPMap_UI::listenADPGenerationStarted()
   m_ADPController->moveToThread(m_Thread);
   m_ADPController->setData(data);
   connect(m_Thread, SIGNAL(started()), m_ADPController, SLOT(createADPMap()));
-  connect(m_Thread, SIGNAL(started()), this, SLOT(listenADPGenerationStarted()));
+  // connect(m_Thread, SIGNAL(started()), this, SLOT(listenADPGenerationStarted()));
+  connect(m_ADPController, SIGNAL(finished()), m_Thread, SLOT(quit()));
+
   connect(m_Thread, SIGNAL(finished()), this, SLOT(listenADPGenerationFinished()));
   connect(m_ADPController, SIGNAL(adpMapCreated(const QImage&)), m_Ui->adpViewer, SLOT(loadImage(const QImage&)));
+  connect(m_ADPController, &ADPMapController::errorMessageGenerated, this, &ADPMap_UI::errorMessageGenerated);
+  connect(m_ADPController, &ADPMapController::warningMessageGenerated, this, &ADPMap_UI::warningMessageGenerated);
+  connect(m_ADPController, &ADPMapController::stdOutputMessageGenerated, this, &ADPMap_UI::stdOutputMessageGenerated);
 
   m_Thread->start();
 #if 0
-  // m_ADPController->ADPMapController::createADPMap(data);
-  listenADPGenerationFinished();
-  qDebug() << "Main Thread: " << QThread::currentThread();
   // Single-threaded for now, but we can multi-thread later if needed
   //  size_t threads = QThreadPool::globalInstance()->maxThreadCount();
   for(int i = 0; i < 1; i++)
@@ -329,7 +331,7 @@ void ADPMap_UI::listenADPGenerationFinished()
 {
   m_ADPController->setCancel(false);
 
-  //  m_Ui->adpMapZoomSB->setEnabled(true);
+  m_Ui->adpMapZoomSB->setEnabled(true);
   m_Ui->adpMapSaveBtn->setEnabled(true);
   m_Ui->adpMapZoomInBtn->setEnabled(true);
   m_Ui->adpMapZoomOutBtn->setEnabled(true);
