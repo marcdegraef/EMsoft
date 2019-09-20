@@ -35,7 +35,9 @@
 
 #pragma once
 
-#include <vector>
+#include <QtCore/QVector>
+
+#include <hdf5.h>
 
 #include "H5Support/H5Utilities.h"
 #include "H5Support/H5Lite.h"
@@ -64,7 +66,7 @@ class H5Support_EXPORT H5ScopedFileSentinel
   private:
     hid_t* m_FileId;
     bool m_TurnOffErrors;
-    std::vector<hid_t*> m_Groups;
+    QVector<hid_t*> m_Groups;
 
     herr_t (*_oldHDF_error_func)(hid_t, void*){};
     void* _oldHDF_error_client_data{};
@@ -85,7 +87,7 @@ class H5Support_EXPORT H5ScopedGroupSentinel
 
   private:
     bool m_TurnOffErrors;
-    std::vector<hid_t*> m_Groups;
+    QVector<hid_t*> m_Groups;
 
     herr_t (*_oldHDF_error_func)(hid_t, void*){};
     void* _oldHDF_error_client_data{};
@@ -107,7 +109,7 @@ class H5Support_EXPORT H5ScopedObjectSentinel
 
   private:
     bool m_TurnOffErrors;
-    std::vector<hid_t*> m_Groups;
+    QVector<hid_t*> m_Groups;
 
     herr_t (*_oldHDF_error_func)(hid_t, void*){};
     void* _oldHDF_error_client_data{};
