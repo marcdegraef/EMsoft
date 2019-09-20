@@ -189,14 +189,9 @@ void MasterPatternSimulationController::createMasterPattern(MasterPatternSimulat
 
   // adjust the size of the mLPNH and mLPSH arrays to the correct one, since we did not have access
   // to the sizes in the datacheck() routine
-  std::vector<size_t> dims(4, 0);
-  dims[0] = 2 * iParPtr[16] + 1;
-  dims[1] = dims[0];
-  dims[2] = iParPtr[11];
-  //   cDims[3] = genericIPar[8];
-  dims[3] = 1;
+  std::vector<size_t> dims = {static_cast<size_t>(2 * iParPtr[16] + 1), static_cast<size_t>(2 * iParPtr[16] + 1), static_cast<size_t>(iParPtr[11]), 1ULL};
 
-  size_t dimsSize = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());
+  size_t dimsSize = std::accumulate(dims.begin(), dims.end(), 1ULL, std::multiplies<size_t>());
 
   std::vector<int32_t> accumzPtr = m_MonteCarloReader->getAccumzPtr();
   if(accumzPtr.empty())
@@ -413,13 +408,12 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // we use the standard names "mLPNH" and "mLPSH", regardless of what the user entered for this array name;
   // the user-defined name is only relevant within DREAM.3D
   {
-    QVector<hsize_t> dims(4);
-    dims[0] = genericIParPtr[8];          // number of atom types
-    dims[1] = genericIParPtr[11];         // number of energy bins
-    dims[2] = 2 * genericIParPtr[16] + 1; // number of x pixels
-    dims[3] = dims[2];                 // number of y pixels
+    QVector<hsize_t> dims{static_cast<hsize_t>(genericIParPtr[8]),           // number of atom types
+                          static_cast<hsize_t>(genericIParPtr[11]),          // number of energy bins
+                          static_cast<hsize_t>(2 * genericIParPtr[16] + 1),  // number of x pixels
+                          static_cast<hsize_t>(2 * genericIParPtr[16] + 1)}; // number of y pixels
 
-    if(!writer->writePointerDataset(EMsoft::Constants::mLPNH, m_GenericLPNHPtr.data(), dims))
+    if(!writer->writePointerDataset(EMsoft::Constants::mLPNH, m_GenericLPNHPtr.data(), dims.toStdVector()))
     {
       QFile::remove(tmpOutputFilePath);
       return false;
@@ -427,12 +421,12 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
     // Create the stereographic northern hemisphere master pattern
     dims.pop_front();
-    size_t zDim = dims[0];
+    size_t zDim = dims[1];
     std::vector<float> genericSPNHPtr;
     size_t offset = 0;
-    for(int z = 0; z < zDim; z++)
+    for(size_t z = 0; z < zDim; z++)
     {
-      ProjectionConversions projConversion(this);
+      ProjectionConversions projConversion;
       std::vector<float> conversion =
           projConversion.convertLambertSquareData<float>(m_GenericLPNHPtr, dims[2], ModifiedLambertProjection::ProjectionType::Stereographic, z, ModifiedLambertProjection::Square::NorthSquare);
 
@@ -445,7 +439,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     }
 
     // Write the stereographic northern hemisphere master pattern to the file
-    if(!writer->writePointerDataset(EMsoft::Constants::masterSPNH, genericSPNHPtr.data(), dims))
+    if(!writer->writePointerDataset(EMsoft::Constants::masterSPNH, genericSPNHPtr.data(), dims.toStdVector()))
     {
       QFile::remove(tmpOutputFilePath);
       return false;
@@ -453,11 +447,13 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   }
 
   {
-    QVector<hsize_t> dims(4);
-    dims[0] = genericIParPtr[8];          // number of atom types
-    dims[1] = genericIParPtr[11];         // number of energy bins
-    dims[2] = 2 * genericIParPtr[16] + 1; // number of x pixels
-    dims[3] = dims[2];                 // number of y pixels
+    std::vector<hsize_t> dims = {static_cast<hsize_t>(genericIParPtr[8]) // number of atom types
+                                 ,
+                                 static_cast<hsize_t>(genericIParPtr[11]) // number of energy bins
+                                 ,
+                                 static_cast<hsize_t>(2 * genericIParPtr[16] + 1) // number of x pixels
+                                 ,
+                                 static_cast<hsize_t>(2 * genericIParPtr[16] + 1)}; // number of y pixels
 
     if(!writer->writePointerDataset(EMsoft::Constants::mLPSH, m_GenericLPSHPtr.data(), dims))
     {
@@ -466,13 +462,17 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     }
 
     // Create the stereographic southern hemisphere master pattern
-    dims.pop_front();
+    dims = {static_cast<hsize_t>(genericIParPtr[11]) // number of energy bins
+            ,
+            static_cast<hsize_t>(2 * genericIParPtr[16] + 1) // number of x pixels
+            ,
+            static_cast<hsize_t>(2 * genericIParPtr[16] + 1)};
     size_t zDim = dims[0];
     std::vector<float> genericSPSHPtr(0);
     size_t offset = 0;
-    for(int z = 0; z < zDim; z++)
+    for(size_t z = 0; z < zDim; z++)
     {
-      ProjectionConversions projConversion(this);
+      ProjectionConversions projConversion;
       std::vector<float> conversion =
           projConversion.convertLambertSquareData<float>(m_GenericLPSHPtr, dims[2], ModifiedLambertProjection::ProjectionType::Stereographic, z, ModifiedLambertProjection::Square::NorthSquare);
 
@@ -509,9 +509,9 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
       return false;
     }
 
-    QVector<hsize_t> cDims(1, 1);
+    std::vector<hsize_t> cDims(1, 1);
     cDims[0] = 4;
-    QVector<float> BP(cDims[0]);
+    std::vector<float> BP(cDims[0]);
     BP[0] = simData.betheParametersX;
     BP[1] = simData.betheParametersY;
     BP[2] = simData.betheParametersZ;
@@ -523,11 +523,11 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
       return false;
     }
 
-    cDims[0] = genericIParPtr[11];
-    QVector<float> EkeV(cDims[0]);
-    for(int i = 0; i < genericIParPtr[11]; i++)
+    cDims[0] = static_cast<hsize_t>(genericIParPtr[11]);
+    std::vector<float> EkeV(cDims[0]);
+    for(hsize_t i = 0; i < static_cast<hsize_t>(genericIParPtr[11]); i++)
     {
-      EkeV[i] = genericFParPtr[3] + (float)i * genericFParPtr[4];
+      EkeV[i] = genericFParPtr[3] + static_cast<float>(i) * genericFParPtr[4];
     }
 
     if(!writer->writeVectorDataset(EMsoft::Constants::EkeVs, EkeV, cDims))
@@ -1080,8 +1080,8 @@ std::vector<int32_t> MasterPatternSimulationController::getIParPtr(MasterPattern
     return std::vector<int32_t>();
   }
 
-  iParPtr[16] = static_cast<size_t>(simData.numOfMPPixels);      // number of pixels in master pattern
-  iParPtr[17] = static_cast<size_t>(simData.numOfOpenMPThreads); // number of OpenMP threads to be used
+  iParPtr[16] = static_cast<int32_t>(simData.numOfMPPixels);      // number of pixels in master pattern
+  iParPtr[17] = static_cast<int32_t>(simData.numOfOpenMPThreads); // number of OpenMP threads to be used
 
   return iParPtr;
 }
@@ -1097,10 +1097,10 @@ std::vector<float> MasterPatternSimulationController::getFParPtr(MasterPatternSi
     return std::vector<float>();
   }
 
-  fParPtr[10] = simData.smallestDSpacing;
-  fParPtr[11] = simData.betheParametersX;
-  fParPtr[12] = simData.betheParametersY;
-  fParPtr[13] = simData.betheParametersZ;
+  fParPtr[10] = static_cast<float>(simData.smallestDSpacing);
+  fParPtr[11] = static_cast<float>(simData.betheParametersX);
+  fParPtr[12] = static_cast<float>(simData.betheParametersY);
+  fParPtr[13] = static_cast<float>(simData.betheParametersZ);
 
   return fParPtr;
 }

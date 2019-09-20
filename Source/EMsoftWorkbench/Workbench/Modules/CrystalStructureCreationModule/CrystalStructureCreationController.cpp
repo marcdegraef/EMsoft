@@ -131,9 +131,9 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   }
 
   // lattice parameters
-  QVector<hsize_t> dims;
+  std::vector<hsize_t> dims;
   dims.push_back(6);
-  QVector<double> lp(6);
+  std::vector<double> lp(6);
   lp[3] = 90.0;
   lp[4] = 90.0;
   lp[5] = 90.0;
@@ -252,12 +252,12 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   // AtomTypes
   std::vector<std::vector<double>> td = data.atomCoordinates;
   size_t numOfAtoms = td.size();
-  QVector<hsize_t> dims2;
+  std::vector<hsize_t> dims2;
   dims2.push_back(numOfAtoms);
-  QVector<int> atps(numOfAtoms);
-  for(int i = 0; i < numOfAtoms; i++)
+  std::vector<int> atps(numOfAtoms);
+  for(size_t i = 0; i < numOfAtoms; i++)
   {
-    atps[i] = (int)td[i][0];
+    atps[i] = static_cast<int32_t>(td[i][0]);
   }
   if(!writer->writeVectorDataset(EMsoft::Constants::Atomtypes, atps, dims2))
   {
@@ -266,10 +266,10 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   }
 
   // write AtomData; also perform checks to make sure the fractional coordinates are in [0,1]
-  QVector<double> apos(numOfAtoms * 5);
+  std::vector<double> apos(numOfAtoms * 5);
   double tmp;
   double intpart;
-  for(int i = 0; i < numOfAtoms; i++)
+  for(size_t i = 0; i < numOfAtoms; i++)
   {
     tmp = modf(td[i][1] + 100.0, &intpart); // make sure the coordinates are in [0,1]
     apos[i] = tmp;
@@ -280,7 +280,7 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
     apos[3 * numOfAtoms + i] = td[i][4];
     apos[4 * numOfAtoms + i] = td[i][5];
   }
-  QVector<hsize_t> dims3;
+  std::vector<hsize_t> dims3;
   dims3.push_back(5);
   dims3.push_back(numOfAtoms);
   if(!writer->writeVectorDataset(EMsoft::Constants::AtomData, apos, dims3))
@@ -530,14 +530,14 @@ bool CrystalStructureCreationController::validateCrystalStructureValues(CrystalS
 
   { // all the following use the table data
     // get the table in a form that can be parsed
-    int iv = data.atomCoordinates.size();
+    size_t iv = data.atomCoordinates.size();
     std::vector<std::vector<double>> td = data.atomCoordinates;
 
     // make sure the site occupation parameters are between 0 and 1
     std::vector<double> row(iv);
     if(0 != iv)
     {
-      for(int i = 0; i < iv; i++)
+      for(size_t i = 0; i < iv; i++)
       {
         row[i] = td[i][4];
       }
@@ -554,7 +554,7 @@ bool CrystalStructureCreationController::validateCrystalStructureValues(CrystalS
     // make sure that Debye-Waller factors are all strictly larger than 0
     if(0 != iv)
     {
-      for(int i = 0; i < iv; i++)
+      for(size_t i = 0; i < iv; i++)
       {
         row[i] = td[i][5];
       }
@@ -570,7 +570,7 @@ bool CrystalStructureCreationController::validateCrystalStructureValues(CrystalS
     // make sure that the atom types are between 1 and 92
     if(0 != iv)
     {
-      for(int i = 0; i < iv; i++)
+      for(size_t i = 0; i < iv; i++)
       {
         row[i] = td[i][0];
       }
