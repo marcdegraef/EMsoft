@@ -126,7 +126,7 @@ signals:
   void updateMCProgress(int loop, int totalLoops, float bseYield) const;
 
 private:
-    bool m_Cancel;
+  bool m_Cancel = false;
 
   XtalFileReader* m_XtalReader = nullptr;
   QString m_StartTime = "";
@@ -140,7 +140,7 @@ private:
 
   bool m_HasErrors = false;
 
-  char* m_SPar;
+  std::vector<char> m_SPar;
 
   /**
    * @brief initializeData
@@ -171,13 +171,13 @@ private:
    * @param platformID
    * @return
    */
-  int getnumCLDevices(int platformID) const;
+  int getnumCLDevices(uint32_t platformID) const;
 
   /**
    * @brief getDeviceInfo
    * @param platformID
    */
-  void writeDeviceInfo(int platformID) const;
+  void writeDeviceInfo(uint32_t platformID) const;
 
   /**
    * @brief getEMsoftUserName

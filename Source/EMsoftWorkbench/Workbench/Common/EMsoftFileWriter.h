@@ -113,10 +113,10 @@ class EMsoftFileWriter : public QObject
      * @return
      */
     template <typename T>
-    bool writeVectorDataset(const QString &dsetName, QVector<T> value, QVector<hsize_t> dims) const
+    bool writeVectorDataset(const QString& dsetName, std::vector<T> value, std::vector<hsize_t> dims) const
     {
       hid_t locId = getCurrentLocId();
-      herr_t err = QH5Lite::writeVectorDataset(locId, dsetName, dims, value);
+      herr_t err = H5Lite::writeVectorDataset(locId, dsetName.toStdString(), dims, value);
       if(err < 0)
       {
         QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
@@ -134,11 +134,11 @@ class EMsoftFileWriter : public QObject
      * @return
      */
     template <typename T>
-    bool writePointerDataset(const QString &dsetName, T* value, QVector<hsize_t> dims) const
+    bool writePointerDataset(const QString& dsetName, T* value, std::vector<hsize_t> dims) const
     {
       hid_t locId = getCurrentLocId();
-      int32_t rank = dims.size();
-      int err = QH5Lite::writePointerDataset(locId, dsetName, rank, dims.data(), value);
+      int32_t rank = static_cast<int32_t>(dims.size());
+      int err = H5Lite::writePointerDataset(locId, dsetName.toStdString(), rank, dims.data(), value);
       if(err < 0)
       {
         QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);

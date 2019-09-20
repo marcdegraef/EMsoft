@@ -35,10 +35,10 @@
 
 #pragma once
 
+#include <vector>
 
 #include "H5Support/H5Utilities.h"
 #include "H5Support/H5Lite.h"
-
 #include "H5Support/H5Support.h"
 
 #if defined (H5Support_NAMESPACE)
