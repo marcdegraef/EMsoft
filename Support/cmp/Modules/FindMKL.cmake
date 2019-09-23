@@ -128,17 +128,21 @@ get_filename_component(MKL_LIB_DIR ${MKL_INCLUDE_DIR} DIRECTORY)
 set(MKL_LIB_DIR "${MKL_LIB_DIR}/lib")
 set(MKL_LIB_DIRS "${MKL_LIB_DIR}")
 if(NOT APPLE)
-    set(MKL_LIB_DIRS "${MKL_LIB_DIR}/${MKL_ARCH_DIR}")
-    if(NOT "${IFORT_COMPILER_ROOT_DIR}" STREQUAL "")
+    set(MKL_LIB_DIRS "${MKL_LIB_DIR}/${MKL_ARCH_DIR}"_)
+endif()
+if(NOT "${IFORT_COMPILER_ROOT_DIR}" STREQUAL "")
+    if(NOT APPLE)
         get_filename_component(IFORT_COMPILER_ROOT_DIR ${IFORT_COMPILER_ROOT_DIR} DIRECTORY)
-        set(MKL_LIB_DIRS 
-            "${MKL_LIB_DIRS}"
-            "${IFORT_COMPILER_ROOT_DIR}/lib"  # MacOS and Linux(?)
-            "${IFORT_COMPILER_ROOT_DIR}/redist/${MKL_ARCH_DIR}/compiler" # Windows
-        )
     endif()
 endif()
-# message(STATUS "MKL_LIB_DIRS: ${MKL_LIB_DIRS}")
+set(MKL_LIB_DIRS 
+    "${MKL_LIB_DIRS}"
+    "${IFORT_COMPILER_ROOT_DIR}/lib"  # MacOS and Linux(?)
+    "${IFORT_COMPILER_ROOT_DIR}/redist/${MKL_ARCH_DIR}/compiler" # Windows
+)
+
+
+#message(STATUS "MKL_LIB_DIRS: ${MKL_LIB_DIRS}")
 
 
 #-------------------------------------------------------------------------------

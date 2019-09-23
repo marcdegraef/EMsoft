@@ -97,6 +97,7 @@ class EMsoftFileWriter : public QObject
       {
         QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
         emit errorMessageGenerated(str, -10005);
+        std::cout << str.toStdString() << std::endl;
         return false;
       }
 
@@ -121,6 +122,7 @@ class EMsoftFileWriter : public QObject
       {
         QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
         emit errorMessageGenerated(str, -10007);
+        std::cout << str.toStdString() << std::endl;
         return false;
       }
 
@@ -143,6 +145,7 @@ class EMsoftFileWriter : public QObject
       {
         QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
         emit errorMessageGenerated(str, -20019);
+        std::cout << str.toStdString() << std::endl;
         return false;
       }
 
