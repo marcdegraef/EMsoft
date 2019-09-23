@@ -26,7 +26,12 @@ if( ${EMsoft_ENABLE_HDF5_SUPPORT} )
   add_subdirectory(${PROJECT_SOURCE_DIR}/Source/EMsoftHDFLib ${PROJECT_BINARY_DIR}/EMsoftHDFLib)
 endif()
 
+<<<<<<< HEAD
 set(MODALITY_DIRS
+=======
+# if the EMSphInx folder exists, then we include it in the build
+  set(MODALITY_DIRS
+>>>>>>> removes f90 build of EMSphInx from package
     DictionaryIndexing
     GBs
     OLIO
