@@ -166,7 +166,7 @@ private:
    * @param simData
    * @return
    */
-  bool writeEMsoftHDFFile(MasterPatternSimulationController::MasterPatternSimulationData simData) const;
+  bool writeEMsoftHDFFile(const MasterPatternSimulationData& simData) const;
 
 #if 0
     /**

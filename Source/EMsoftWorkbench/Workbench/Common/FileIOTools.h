@@ -43,7 +43,42 @@ class FileIOTools
     virtual ~FileIOTools();
 
     static QString GetOpenPathFromDialog(const QString &title, const QString &filters, QString &openDialogLastDirectory);
-    static QString GetSavePathFromDialog(const QString &title, const QString &filters, QString &openDialogLastDirectory);
+    static QString GetSavePathFromDialog(const QString& title, const QString& filters, QString& openDialogLastDirectory);
+
+    /**
+     * @brief CreateNMLEntry
+     * @param key
+     * @param value
+     * @param last
+     * @return
+     */
+    static std::string CreateNMLEntry(const QString& key, const QString& value, bool last = false);
+
+    /**
+     * @brief CreateNMLEntry
+     * @param key
+     * @param value
+     * @param last
+     * @return
+     */
+    static std::string CreateNMLEntry(const QString& key, double value, bool last = false);
+    /**
+     * @brief CreateNMLEntry
+     * @param key
+     * @param value
+     * @param last
+     * @return
+     */
+    static std::string CreateNMLEntry(const QString& key, float value, bool last = false);
+
+    /**
+     * @brief CreateNMLEntry
+     * @param key
+     * @param value
+     * @param last
+     * @return
+     */
+    static std::string CreateNMLEntry(const QString& key, int32_t value, bool last = false);
 
   protected:
     FileIOTools();

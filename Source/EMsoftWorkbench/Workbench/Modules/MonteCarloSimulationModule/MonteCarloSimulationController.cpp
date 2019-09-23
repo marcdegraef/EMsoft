@@ -36,9 +36,9 @@
 #include "MonteCarloSimulationController.h"
 
 #include <cmath>
-
 #include <functional>
 #include <iostream>
+#include <sstream>
 
 #include "EMsoftWrapperLib/SEM/EMsoftSEMwrappers.h"
 
@@ -48,12 +48,12 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
-
 #include <QtNetwork/QHostInfo>
 
-#include "Common/Constants.h"
-#include "Common/EMsoftFileWriter.h"
-#include "Common/XtalFileReader.h"
+#include "Workbench/Common/Constants.h"
+#include "Workbench/Common/EMsoftFileWriter.h"
+#include "Workbench/Common/FileIOTools.h"
+#include "Workbench/Common/XtalFileReader.h"
 
 #include "EMsoftLib/EMsoftStringConstants.h"
 
@@ -91,7 +91,6 @@ void MonteCarloSimulationControllerProgress(size_t instance, int loopCompleted, 
 // -----------------------------------------------------------------------------
 MonteCarloSimulationController::MonteCarloSimulationController(QObject* parent)
 : QObject(parent)
-, m_Cancel(false)
 {
   m_XtalReader = new XtalFileReader();
   connect(m_XtalReader, &XtalFileReader::errorMessageGenerated, [=](const QString& msg) { emit errorMessageGenerated(msg); });
@@ -913,54 +912,65 @@ bool MonteCarloSimulationController::writeEMsoftHDFFile(MonteCarloSimulationCont
   }
 
   //--------------------------------
-  // here we create a JSONfiles group that contains the jsonobject in its entirety
-  if(!writer->openGroup(EMsoft::Constants::JSONfiles))
+  // here we create a NMLfiles group that contains the NMLfiles in its entirety
+  if(!writer->openGroup(EMsoft::Constants::NMLfiles))
   {
     QFile::remove(tmpOutputFilePath);
     return false;
   }
 
+  std::vector<std::string> nml;
+
+  nml.emplace_back(std::string(" &MCCLdata"));
+  nml.emplace_back(std::string("! only bse1, full or Ivol simulation"));
+  if(iParPtr[13] == 1)
   {
-    QJsonObject topObject;
-    QJsonObject rootObject;
-    if(simData.mcMode == 1)
-    {
-      rootObject.insert(EMsoft::Constants::mode, EMsoft::Constants::full);
-      rootObject.insert(EMsoft::Constants::sig, simData.sampleTiltAngleSig);
-      rootObject.insert(EMsoft::Constants::sig, simData.sampleRotAngleOmega);
-    }
-    else
-    {
-      rootObject.insert(EMsoft::Constants::mode, EMsoft::Constants::bse1);
-      rootObject.insert(EMsoft::Constants::sigstart, simData.sampleStartTiltAngle);
-      rootObject.insert(EMsoft::Constants::sigend, simData.sampleEndTiltAngle);
-      rootObject.insert(EMsoft::Constants::sigstep, simData.sampleTiltAngleSig);
-    }
+    nml.emplace_back(FileIOTools::CreateNMLEntry("mode", EMsoft::Constants::full, false));
+  }
 
-    QFileInfo simDataInputFileInfo(simData.inputFilePath);
-    rootObject.insert(EMsoft::Constants::xtalname, simDataInputFileInfo.fileName());
-    rootObject.insert(EMsoft::Constants::numsx, simData.numOfPixelsN);
-    rootObject.insert(EMsoft::Constants::num_el, simData.numOfEPerWorkitem);
-    rootObject.insert(EMsoft::Constants::platid, simData.gpuPlatformID);
-    rootObject.insert(EMsoft::Constants::devid, simData.gpuDeviceID);
-    rootObject.insert(EMsoft::Constants::globalworkgrpsz, simData.globalWorkGroupSize);
-    rootObject.insert(EMsoft::Constants::totnumel, simData.totalNumOfEConsidered);
-    rootObject.insert(EMsoft::Constants::multiplier, simData.multiplierForTotalNumOfE);
-    rootObject.insert(EMsoft::Constants::EkeV, simData.acceleratingVoltage);
-    rootObject.insert(EMsoft::Constants::Ehistmin, simData.minEnergyConsider);
-    rootObject.insert(EMsoft::Constants::Ebinsize, simData.energyBinSize);
-    rootObject.insert(EMsoft::Constants::depthmax, simData.maxDepthConsider);
-    rootObject.insert(EMsoft::Constants::depthstep, simData.depthStepSize);
-    rootObject.insert(EMsoft::Constants::dataname, simData.outputFilePath);
-    topObject.insert(EMsoft::Constants::MCCLdata, rootObject);
-    QJsonDocument doc(topObject);
-    QString strJson(doc.toJson(QJsonDocument::Compact));
+  nml.emplace_back(std::string("! name of the crystal structure file"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry("xtalname", simData.inputFilePath));
+  nml.emplace_back(std::string("! for full mode: sample tilt angle from horizontal [degrees]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::sig, fParPtr[0]));
+  nml.emplace_back(std::string("! sample tilt angle around RD axis [degrees]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::omega, fParPtr[1]));
+  nml.emplace_back(std::string("! number of pixels along x-direction of square projection [odd number!]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::numsx, 2 * iParPtr[0] + 1));
+  nml.emplace_back(std::string("! number of incident electrons per thread"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::num_el, iParPtr[2]));
+  nml.emplace_back(std::string("! GPU platform ID selector"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::platid, iParPtr[6]));
+  nml.emplace_back(std::string("! GPU device ID selector"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::devid, iParPtr[5]));
+  nml.emplace_back(std::string("! number of work items (depends on GPU card; leave unchanged)"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::globalworkgrpsz, iParPtr[1]));
+  nml.emplace_back(std::string("! total number of incident electrons and multiplier (to get more than 2^(31)-1 electrons)"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::totnumel, iParPtr[3]));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::multiplier, iParPtr[4]));
+  nml.emplace_back(std::string("! incident beam energy [keV]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::EkeV, static_cast<double>(fParPtr[2])));
+  nml.emplace_back(std::string("! minimum energy to consider [keV]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::Ehistmin, static_cast<double>(fParPtr[3])));
+  nml.emplace_back(std::string("! energy binsize [keV]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::Ebinsize, static_cast<double>(fParPtr[4])));
+  nml.emplace_back(std::string("! maximum depth to consider for exit depth statistics [nm]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthmax, static_cast<double>(fParPtr[5])));
+  nml.emplace_back(std::string("! depth step size [nm]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthstep, static_cast<double>(fParPtr[6])));
+  nml.emplace_back(std::string("! should the user be notified by email or Slack that the program has completed its run?"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry({"Notify"}, {"Off"}));
+  nml.emplace_back(std::string("! output data file name; pathname is relative to the EMdatapathname path !!!"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::dataname, simData.outputFilePath));
 
-    if(!writer->writeStringDataset(EMsoft::Constants::MCOpenCLJSON, strJson))
-    {
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
+  nml.emplace_back(std::string(" /"));
+
+  hid_t locID = writer->getCurrentLocId();
+  herr_t err = H5Lite::writeVectorOfStringsDataset(locID, EMsoft::Constants::MCOpenCLNML.toStdString(), nml);
+
+  if(err < 0)
+  {
+    QFile::remove(tmpOutputFilePath);
+    return false;
   }
 
   // Close the group

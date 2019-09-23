@@ -36,6 +36,9 @@ cmpRevisionString( GENERATED_HEADER_FILE_PATH "${EMsoftWorkbench_VERSION_HDR_FIL
 
 include(${CMP_SOURCE_DIR}/cmpProject.cmake)
 
+cmpConfigureFileWithMD5Check(CONFIGURED_TEMPLATE_PATH ${EMsoftWorkbench_SOURCE_DIR}/EMsoftWorkbench.h.in
+                            GENERATED_FILE_PATH ${EMsoftWorkbench_BINARY_DIR}/${CMP_TOP_HEADER_FILE})
+
 # --------------------------------------------------------------------
 # Find and Use the Qt5 Libraries
 include(${CMP_SOURCE_DIR}/ExtLib/Qt5Support.cmake)
@@ -119,10 +122,12 @@ set_source_files_properties( ${EMsoftWorkbench_Generated_MOC_SRCS} PROPERTIES GE
 #set_source_files_properties( ${EMsoftWorkbench_Generated_MOC_SRCS} PROPERTIES HEADER_FILE_ONLY TRUE)
 
 set(EMsoftWorkbench_HDRS
-  
+  ${EMsoftWorkbench_BINARY_DIR}/${CMP_TOP_HEADER_FILE}
+  ${EMsoftWorkbench_BINARY_DIR}/${CMP_VERSION_HEADER_FILE_NAME}
 )
 
 set(EMsoftWorkbench_SRCS
+  ${EMsoftWorkbench_BINARY_DIR}/${CMP_VERSION_SOURCE_FILE_NAME}
   ${EMsoftWorkbench_SOURCE_DIR}/EMsoftApplication.cpp
   ${EMsoftWorkbench_SOURCE_DIR}/EMsoftWorkbench_UI.cpp
   ${EMsoftWorkbench_SOURCE_DIR}/main.cpp
@@ -230,7 +235,10 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE
     ${EbsdLib_INCLUDE_DIRS}
     )
-#target_compile_options(${PROJECT_NAME} BEFORE PUBLIC $<$<CONFIG:Debug>:/DEBUG:FULL> )
+
+if(MKL_FOUND)
+  set_target_properties(${PROJECT_NAME} PROPERTIES BUILD_RPATH "${EMsoft_OpenMP_LIB_DIR}")
+endif()
 
 
 #   target_link_directories(${PROJECT_NAME} 

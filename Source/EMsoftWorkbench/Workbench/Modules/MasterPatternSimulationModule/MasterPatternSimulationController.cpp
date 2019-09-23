@@ -46,19 +46,23 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QThread>
-
 #include <QtNetwork/QHostInfo>
 
-#include "Common/Constants.h"
-#include "Common/EMsoftFileWriter.h"
-#include "Common/MonteCarloFileReader.h"
-#include "Common/ProjectionConversions.hpp"
+#include "H5Support/H5ScopedSentinel.h"
+
+#include "Workbench/Common/Constants.h"
+#include "Workbench/Common/EMsoftFileWriter.h"
+#include "Workbench/Common/FileIOTools.h"
+#include "Workbench/Common/MonteCarloFileReader.h"
+#include "Workbench/Common/ProjectionConversions.hpp"
 
 #include "EMsoftLib/EMsoftStringConstants.h"
 
 #include "H5Support/H5ScopedSentinel.h"
 #include "H5Support/QH5Lite.h"
 #include "H5Support/QH5Utilities.h"
+
+#include "EMsoftWorkbenchVersion.h"
 
 #define CL_VECTOR std::vector
 
@@ -338,7 +342,7 @@ bool MasterPatternSimulationController::validateMasterPatternValues(MasterPatter
 //  a problem, since all the entries in the json/nml file are explicitly parsed out
 //  in the NMLparameters group anyway...
 // -----------------------------------------------------------------------------
-bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulationController::MasterPatternSimulationData simData) const
+bool MasterPatternSimulationController::writeEMsoftHDFFile(const MasterPatternSimulationController::MasterPatternSimulationData& simData) const
 {
   QString inputFilePath = simData.inputFilePath;
   QString outputFilePath = simData.outputFilePath;
@@ -376,6 +380,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   std::vector<float> genericFParPtr = getFParPtr(simData);
   if(genericIParPtr.empty() || genericFParPtr.empty())
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -384,6 +389,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Create the EMData/EBSDmaster group
   if(!writer->openGroup(EMsoft::Constants::EMData))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -392,6 +398,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   {
     if(!writer->openGroup(EMsoft::Constants::EBSDmaster))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -400,6 +407,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   {
     if(!writer->openGroup(EMsoft::Constants::ECPmaster))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -421,7 +429,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
     // Create the stereographic northern hemisphere master pattern
     dims.pop_front();
-    size_t zDim = dims[1];
+    size_t zDim = dims[0];
     std::vector<float> genericSPNHPtr;
     size_t offset = 0;
     for(size_t z = 0; z < zDim; z++)
@@ -441,6 +449,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     // Write the stereographic northern hemisphere master pattern to the file
     if(!writer->writePointerDataset(EMsoft::Constants::masterSPNH, genericSPNHPtr.data(), dims.toStdVector()))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -457,6 +466,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
     if(!writer->writePointerDataset(EMsoft::Constants::mLPSH, m_GenericLPSHPtr.data(), dims))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -487,6 +497,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     // Write the stereographic southern hemisphere master pattern to a file
     if(!writer->writePointerDataset(EMsoft::Constants::masterSPSH, genericSPSHPtr.data(), dims))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -498,6 +509,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   {
     if(!writer->writeScalarDataset(EMsoft::Constants::numEbins, genericIParPtr[11]))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -505,6 +517,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     int i = 1;
     if(!writer->writeScalarDataset(EMsoft::Constants::lastEnergy, i))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -519,6 +532,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
     if(!writer->writeVectorDataset(EMsoft::Constants::BetheParameters, BP, cDims))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -532,6 +546,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
     if(!writer->writeVectorDataset(EMsoft::Constants::EkeVs, EkeV, cDims))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -541,11 +556,13 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
     double ekev;
     if(!m_MonteCarloReader->getAcceleratingVoltage(ekev))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
     if(!writer->writeScalarDataset(EMsoft::Constants::EkeV, ekev))
     {
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -553,6 +570,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
   if(!writer->writeScalarDataset(EMsoft::Constants::numset, genericIParPtr[8]))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -560,6 +578,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   QString xtalFileName = "";
   if(!m_MonteCarloReader->getXtalFileName(xtalFileName))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -567,6 +586,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   dname = EMsoft::Constants::xtalname.toStdString();
   if(!writer->writeStringDataset(EMsoft::Constants::xtalname, xtalFileName))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -574,10 +594,12 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Close the groups
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     return false;
   }
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     return false;
   }
 
@@ -586,11 +608,13 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // we will move this to the EMsoftToolboxPlugin.cpp file
   if(!writer->openGroup(EMsoft::Constants::EMheader))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->openGroup(EMsoft::Constants::EBSDmaster))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -599,6 +623,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   QString date = QDateTime::currentDateTime().date().toString();
   if(!writer->writeStringDataset(EMsoft::Constants::Date, date))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -606,6 +631,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // StartTime, already defined in Execute()
   if(!writer->writeStringDataset(EMsoft::Constants::StartTime, m_StartTime))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -614,6 +640,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   QString time = QDateTime::currentDateTime().time().toString();
   if(!writer->writeStringDataset(EMsoft::Constants::StopTime, time))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -622,6 +649,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   QString localHost = QHostInfo::localHostName();
   if(!writer->writeStringDataset(EMsoft::Constants::HostName, localHost))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -630,6 +658,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   QString programName = "EMsoftWorkbench Master Pattern Simulation Module";
   if(!writer->writeStringDataset(EMsoft::Constants::ProgramName, programName))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -637,6 +666,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // UserName
   if(!writer->writeStringDataset(EMsoft::Constants::UserName, getEMsoftUserName()))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -644,6 +674,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // UserEmail
   if(!writer->writeStringDataset(EMsoft::Constants::UserEmail, getEMsoftUserEmail()))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -651,14 +682,16 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // UserLocation
   if(!writer->writeStringDataset(EMsoft::Constants::UserLocation, getEMsoftUserLocation()))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
 
   // Version
-  QString version = "EMsoft 3.1.0";
+  QString version = EMsoftWorkbench::Version::Complete();
   if(!writer->writeStringDataset(EMsoft::Constants::Version, version))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -668,6 +701,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   int i = 1;
   if(!writer->writeScalarDataset(EMsoft::Constants::FixedLength, i))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -675,32 +709,55 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Close the groups
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     return false;
   }
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     return false;
   }
 
   //--------------------------------
   // here we create a JSONfiles group that contains the jsonobject in its entirety
-  if(!writer->openGroup(EMsoft::Constants::JSONfiles))
+  if(!writer->openGroup(EMsoft::Constants::NMLfiles))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
 
-  QJsonObject topObject;
-  QJsonObject rootObject;
-  rootObject.insert(EMsoft::Constants::npx, simData.numOfMPPixels);
-  rootObject.insert(EMsoft::Constants::nthreads, simData.numOfOpenMPThreads);
-  rootObject.insert(EMsoft::Constants::dmin, simData.smallestDSpacing);
-  rootObject.insert(EMsoft::Constants::outname, simData.outputFilePath);
-  topObject.insert(EMsoft::Constants::EBSDmastervars, rootObject);
-  QJsonDocument doc(topObject);
-  QString strJson(doc.toJson(QJsonDocument::Compact));
-  if(!writer->writeStringDataset(EMsoft::Constants::EBSDmasterJSON, strJson))
+  std::vector<std::string> nml;
+
+  nml.emplace_back(std::string(" &EBSDmastervars"));
+  nml.emplace_back(std::string("! smallest d-spacing to take into account [nm]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::dmin, simData.smallestDSpacing));
+  nml.emplace_back(std::string("! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::npx, simData.numOfMPPixels));
+  nml.emplace_back(std::string("! name of EMMCOpenCL output file to be used to copy the MC data from for this master pattern run;"));
+  nml.emplace_back(std::string("! This can be used to perform multiple master pattern runs starting from the same MC data set without"));
+  nml.emplace_back(std::string("! having to rerun the MC computation.  Leave this variable set to 'undefined' if not needed."));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::copyfromenergyfile, {"undefined"}));
+  nml.emplace_back(std::string("! name of the energy statistics file produced by EMMCOpenCL program; relative to EMdatapathname;"));
+  nml.emplace_back(std::string("! this file will also contain the output data of the master program"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::energyfile, simData.inputFilePath));
+  nml.emplace_back(std::string("! number of OpenMP threads"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::nthreads, simData.numOfOpenMPThreads));
+  nml.emplace_back(std::string("! do you wish to receive a notification (Email or Slack) when the program completes ?"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry({"Notify"}, {"Off"}));
+  nml.emplace_back(std::string("! restart computation ?"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::restart, {".FALSE."}));
+  nml.emplace_back(std::string("! create output file with uniform master patterns set to 1.0 (used to study background only)"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::uniform, {".FALSE."}));
+
+  nml.emplace_back(std::string(" /"));
+
+  hid_t locID = writer->getCurrentLocId();
+  herr_t err = H5Lite::writeVectorOfStringsDataset(locID, EMsoft::Constants::EBSDmasterNML.toStdString(), nml);
+
+  if(err < 0)
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -708,6 +765,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Close the group
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     return false;
   }
 
@@ -715,33 +773,39 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Create the NMLparameters group
   if(!writer->openGroup(EMsoft::Constants::NMLparameters))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->openGroup(EMsoft::Constants::BetheList))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
 
   if(!writer->writeScalarDataset(EMsoft::Constants::c1, simData.betheParametersX))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->writeScalarDataset(EMsoft::Constants::c2, simData.betheParametersY))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->writeScalarDataset(EMsoft::Constants::c3, simData.betheParametersZ))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   float val = 1.0f;
   if(!writer->writeScalarDataset(EMsoft::Constants::sgdbdiff, val))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -749,6 +813,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Close the group
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     return false;
   }
 
@@ -756,51 +821,60 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Create the EBSDMasterNameList group
   if(!writer->openGroup(EMsoft::Constants::EBSDMasterNameList))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
 
   if(!writer->writeScalarDataset(EMsoft::Constants::dmin, simData.smallestDSpacing))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->writeScalarDataset(EMsoft::Constants::npx, simData.numOfMPPixels))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->writeScalarDataset(EMsoft::Constants::nthreads, simData.numOfOpenMPThreads))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   i = 0;
   if(!writer->writeScalarDataset(EMsoft::Constants::restart, i))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   i = -1;
   if(!writer->writeScalarDataset(EMsoft::Constants::Esel, i))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   i = 6;
   if(!writer->writeScalarDataset(EMsoft::Constants::Stdout, i))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->writeStringDataset(EMsoft::Constants::outname, simData.outputFilePath))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   int uniform = 0;
   if(!writer->writeScalarDataset(EMsoft::Constants::uniform, uniform))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -808,6 +882,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // and finally the energy (Monte Carlo) file name
   if(!writer->writeStringDataset(EMsoft::Constants::energyfile, simData.inputFilePath))
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -815,11 +890,13 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Close the groups
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
   if(!writer->closeGroup())
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -827,6 +904,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   // Close the file
   if(!writer->closeFile())
   {
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }
@@ -849,6 +927,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
 
       QString ss = QObject::tr("Error deleting existing output file. Error reported was: '%1'").arg(fud.errorString());
       emit errorMessageGenerated(ss);
+      writer->closeFile();
       QFile::remove(tmpOutputFilePath);
       return false;
     }
@@ -858,6 +937,7 @@ bool MasterPatternSimulationController::writeEMsoftHDFFile(MasterPatternSimulati
   {
     QString ss = QObject::tr("Error renaming temp file to output file '%1' -> '%2'").arg(tmpOutputFilePath).arg(outputFilePath);
     emit errorMessageGenerated(ss);
+    writer->closeFile();
     QFile::remove(tmpOutputFilePath);
     return false;
   }

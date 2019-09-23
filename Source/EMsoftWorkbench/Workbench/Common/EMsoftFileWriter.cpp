@@ -83,6 +83,7 @@ bool EMsoftFileWriter::openFile(const QString &filePath)
   {
     QString ss = QObject::tr("Error creating HDF5 Data File '%1'").arg(filePath);
     emit errorMessageGenerated(ss, -10001);
+    std::cout << ss.toStdString() << std::endl;
     return false;
   }
 
@@ -98,6 +99,7 @@ bool EMsoftFileWriter::closeFile()
   {
     QString ss = QObject::tr("Error closing HDF5 file.'");
     emit errorMessageGenerated(ss, -10002);
+    std::cout << ss.toStdString() << std::endl;
     return false;
   }
 
@@ -136,6 +138,7 @@ bool EMsoftFileWriter::openGroup(const QString &groupName)
   {
     QString parentPath = QH5Utilities::getObjectPath(locId);
     QString ss = QObject::tr("Error opening HDF5 group at path '%1/%2'").arg(parentPath).arg(groupName);
+    std::cout << ss.toStdString() << std::endl;
     emit errorMessageGenerated(ss, -10005);
     return false;
   }
@@ -152,6 +155,7 @@ bool EMsoftFileWriter::closeGroup()
   if (m_IdStack.isEmpty())
   {
     QString ss = QObject::tr("Error closing HDF5 group: no groups are open.'");
+    std::cout << ss.toStdString() << std::endl;
     emit errorMessageGenerated(ss, -10006);
     return false;
   }
@@ -162,6 +166,7 @@ bool EMsoftFileWriter::closeGroup()
   {
     QString ss = QObject::tr("Error closing HDF5 group at path '%1'").arg(QH5Utilities::getObjectPath(id));
     emit errorMessageGenerated(ss, -10007);
+    std::cout << ss.toStdString() << std::endl;
     return false;
   }
 
@@ -198,8 +203,9 @@ bool EMsoftFileWriter::writeStringDataset(const QString &dsetName, const QString
   herr_t err = QH5Lite::writeStringDataset(locId, dsetName, value );
   if(err < 0)
   {
-    QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
-    emit errorMessageGenerated(str, -10008);
+    QString ss = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
+    emit errorMessageGenerated(ss, -10008);
+    std::cout << ss.toStdString() << std::endl;
     return false;
   }
 

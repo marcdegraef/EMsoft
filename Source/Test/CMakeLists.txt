@@ -153,7 +153,15 @@ function(create_workflow_test)
 
 endfunction()
 
+#------------------------------------------------------------------------------
+# If the developer did not set these values then we need something.
+if("${EMsoft_TEST_GPU_PLATFORM_ID}" STREQUAL "")
+  set(EMsoft_TEST_GPU_PLATFORM_ID 1)
+endif()
 
+if("${EMsoft_TEST_GPU_DEVICE_ID}" STREQUAL "")
+  set(EMsoft_TEST_GPU_DEVICE_ID 1)
+endif()
 #------------------------------------------------------------------------------
 # 1: The Ni.xtal file should have been copied into the proper spot via some other external means
 # We are just going to have to trust that it is there. We are numbering the tests
