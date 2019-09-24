@@ -144,7 +144,7 @@ void DictionaryIndexingController::createDI(const DIData &data)
     diProcess->setProcessEnvironment(env);
 
     QString nmlFilePath = m_TempDir.path() + QDir::separator() + "EMEBSDDI.nml";
-    writeDIDataToFile("/tmp/EMEBSDDI.nml", data);
+    //  writeDIDataToFile("/tmp/EMEBSDDI.nml", data);
     writeDIDataToFile(nmlFilePath, data);
     QStringList parameters = {nmlFilePath};
     diProcess->start(diExecutablePath, parameters);

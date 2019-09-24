@@ -293,21 +293,21 @@ void ADPMap_UI::listenADPGenerationStarted()
     delete m_ADPController;
     m_ADPController = nullptr;
   }
-  QThread* m_Thread = new QThread;
+  QThread* m_Thread = new QThread; // This will leak and needs to be fixed.
   m_ADPController = new ADPMapController;
   m_ADPController->moveToThread(m_Thread);
   m_ADPController->setData(data);
   connect(m_Thread, SIGNAL(started()), m_ADPController, SLOT(createADPMap()));
-  // connect(m_Thread, SIGNAL(started()), this, SLOT(listenADPGenerationStarted()));
   connect(m_ADPController, SIGNAL(finished()), m_Thread, SLOT(quit()));
-
   connect(m_Thread, SIGNAL(finished()), this, SLOT(listenADPGenerationFinished()));
+
   connect(m_ADPController, SIGNAL(adpMapCreated(const QImage&)), m_Ui->adpViewer, SLOT(loadImage(const QImage&)));
   connect(m_ADPController, &ADPMapController::errorMessageGenerated, this, &ADPMap_UI::errorMessageGenerated);
   connect(m_ADPController, &ADPMapController::warningMessageGenerated, this, &ADPMap_UI::warningMessageGenerated);
   connect(m_ADPController, &ADPMapController::stdOutputMessageGenerated, this, &ADPMap_UI::stdOutputMessageGenerated);
 
   m_Thread->start();
+
 #if 0
   // Single-threaded for now, but we can multi-thread later if needed
   //  size_t threads = QThreadPool::globalInstance()->maxThreadCount();

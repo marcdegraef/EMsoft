@@ -35,7 +35,6 @@
 
 #include "ADPMapController.h"
 
-//#include "EMsoftWrapperLib/DictionaryIndexing/EMsoftDIwrappers.h"
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
 #include <QtCore/QDebug>
@@ -50,7 +49,7 @@
 #include "Constants.h"
 
 static size_t k_InstanceKey = 0;
-static QMap<size_t, ADPMapController*> instances;
+static QMap<size_t, ADPMapController*> s_ControllerInstances;
 
 namespace SizeConstants = DictionaryIndexingModuleConstants::ArraySizes;
 
@@ -63,7 +62,7 @@ namespace SizeConstants = DictionaryIndexingModuleConstants::ArraySizes;
  */
 void ADPMapControllerProgress(size_t instance, int loopCompleted, int totalLoops)
 {
-  ADPMapController* obj = instances[instance];
+  ADPMapController* obj = s_ControllerInstances[instance];
   if(nullptr != obj)
   {
     obj->setUpdateProgress(loopCompleted, totalLoops);
@@ -127,8 +126,9 @@ void ADPMapController::createADPMap()
   // multiple simultaneous instantiations of this filter become possible without
   // incorrect interactions between the callback routines.
   m_Executing = true;
-  instances[m_InstanceKey] = this;
-//  EMsoftCpreprocessEBSDPatterns(iParVector.data(), fParVector.data(), sParVector.data(), m_OutputMaskVector.data(), m_OutputIQMapVector.data(), m_OutputADPMapVector.data(), &ADPMapControllerProgress, m_InstanceKey, &m_Cancel);
+  s_ControllerInstances[m_InstanceKey] = this;
+  //  EMsoftCpreprocessEBSDPatterns(iParVector.data(), fParVector.data(), sParVector.data(), m_OutputMaskVector.data(), m_OutputIQMapVector.data(), m_OutputADPMapVector.data(),
+  //  &ADPMapControllerProgress, m_InstanceKey, &m_Cancel);
 
   QSharedPointer<QProcess> avgDotProductMapProcess = QSharedPointer<QProcess>(new QProcess());
   connect(avgDotProductMapProcess.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(avgDotProductMapProcess->readAllStandardOutput().toStdString())); });
@@ -138,7 +138,7 @@ void ADPMapController::createADPMap()
   if (!adpExecutablePath.isEmpty())
   {
     QString nmlFilePath = m_TempDir.path() + QDir::separator() + "EMgetADP.nml";
-    writeADPDataToFile(nmlFilePath, data);
+    generateNMLFile(nmlFilePath, data);
     QStringList parameters = {nmlFilePath};
     avgDotProductMapProcess->start(adpExecutablePath, parameters);
 
@@ -153,7 +153,7 @@ void ADPMapController::createADPMap()
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void ADPMapController::writeADPDataToFile(const QString &filePath, const ADPMapController::ADPMapData &data) const
+void ADPMapController::generateNMLFile(const QString& filePath, const ADPMapController::ADPMapData& data) const
 {
   QFile outputFile(filePath);
   if (outputFile.open(QFile::WriteOnly))
@@ -277,7 +277,7 @@ void ADPMapController::listenADPMapFinished(int exitCode, QProcess::ExitStatus e
   }
 
   m_Executing = false;
-  instances.remove(m_InstanceKey);
+  s_ControllerInstances.remove(m_InstanceKey);
 
   // do we need to write this accumulator data into an EMsoft .h5 file?
   // This is so that the results can be read by other EMsoft programs outside of DREAM.3D...
