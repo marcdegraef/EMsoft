@@ -130,7 +130,7 @@ void DictionaryIndexingController::createDI(const DIData &data)
 
   QSharedPointer<QProcess> diProcess = QSharedPointer<QProcess>(new QProcess());
   connect(diProcess.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(diProcess->readAllStandardOutput().toStdString())); });
-  connect(diProcess.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(diProcess->readAllStandardOutput().toStdString())); });
+  connect(diProcess.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(diProcess->readAllStandardError().toStdString())); });
   connect(diProcess.data(), &QProcess::errorOccurred, [=] (QProcess::ProcessError error) { emit stdOutputMessageGenerated(tr("Process Error: %1").arg(QString::number(error))); });
   connect(diProcess.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { listenDIFinished(exitCode, exitStatus, data); });
 

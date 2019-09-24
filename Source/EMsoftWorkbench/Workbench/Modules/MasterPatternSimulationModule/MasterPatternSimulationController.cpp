@@ -112,7 +112,7 @@ void MasterPatternSimulationController::execute()
 
   QSharedPointer<QProcess> process = QSharedPointer<QProcess>(new QProcess());
   connect(process.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
-  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
+  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardError().toStdString())); });
   connect(process.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())

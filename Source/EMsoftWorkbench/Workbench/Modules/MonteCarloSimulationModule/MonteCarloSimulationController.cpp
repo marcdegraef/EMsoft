@@ -108,7 +108,7 @@ void MonteCarloSimulationController::execute()
 
   QSharedPointer<QProcess> process = QSharedPointer<QProcess>(new QProcess());
   connect(process.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
-  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
+  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardError().toStdString())); });
   connect(process.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())
@@ -186,7 +186,7 @@ void MonteCarloSimulationController::generateNMLFile(const QString& path)
   nml.emplace_back(std::string("! depth step size [nm]"));
   nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthstep, static_cast<double>(m_InputData.depthStepSize)));
   nml.emplace_back(std::string("! should the user be notified by email or Slack that the program has completed its run?"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry({"Notify"}, {"Off"}));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(QString("Notify"), QString("Off")));
   nml.emplace_back(std::string("! output data file name; pathname is relative to the EMdatapathname path !!!"));
   nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::dataname, m_InputData.outputFilePath));
 
