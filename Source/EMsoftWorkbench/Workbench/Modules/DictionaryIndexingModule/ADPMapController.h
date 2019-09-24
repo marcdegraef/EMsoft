@@ -126,17 +126,17 @@ signals:
 
 private:
   QString m_StartTime = "";
-  ADPMapData m_Data;
-
-  std::vector<float> m_OutputMaskVector;
-  std::vector<float> m_OutputIQMapVector;
-  std::vector<float> m_OutputADPMapVector;
-
   bool m_Cancel = false;
   size_t m_InstanceKey = 0;
   bool m_Executing = false;
 
   QTemporaryDir m_TempDir;
+
+  ADPMapData m_Data;
+
+  std::vector<float> m_OutputMaskVector;
+  std::vector<float> m_OutputIQMapVector;
+  std::vector<float> m_OutputADPMapVector;
 
   /**
    * @brief initializeData
@@ -150,11 +150,11 @@ private:
   QString getADPMapExecutablePath() const;
 
   /**
-   * @brief writeADPDataToFile
+   * @brief generateNMLFile
    * @param file
    * @param data
    */
-  void writeADPDataToFile(const QString &filePath, const ADPMapController::ADPMapData &data) const;
+  void generateNMLFile(const QString& filePath, const ADPMapController::ADPMapData& data) const;
 
 public:
   ADPMapController(const ADPMapController&) = delete; // Copy Constructor Not Implemented

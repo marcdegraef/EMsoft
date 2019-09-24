@@ -35,6 +35,8 @@
 
 #include "FileIOTools.h"
 
+#include <QtCore/QCoreApplication>
+
 #include <QtWidgets/QFileDialog>
 
 #include <iostream>
@@ -117,4 +119,85 @@ std::string FileIOTools::CreateNMLEntry(const QString& key, int32_t value, bool 
     out << ",";
   }
   return out.str();
+}
+
+// -----------------------------------------------------------------------------
+std::pair<QString, QString> FileIOTools::GetExecutablePath(const QString& name)
+{
+
+  QString exePath;
+  QString errMsg;
+
+  QDir workingDirectory = QDir(QCoreApplication::applicationDirPath());
+
+  QString ext = {""};
+#if defined(Q_OS_WIN)
+  ext = ".exe";
+#endif
+  QString completeName = name + ext;
+
+  if(workingDirectory.exists(completeName))
+  {
+    return {workingDirectory.absolutePath() + QDir::separator() + completeName, QString("")};
+  }
+
+#if defined(Q_OS_MAC)
+
+  // Look to see if we are inside an .app package or inside the 'tools' directory
+  if(workingDirectory.dirName() == "MacOS")
+  {
+    workingDirectory.cdUp();
+    if(workingDirectory.cd("bin"))
+    {
+      if(workingDirectory.exists(completeName))
+      {
+        return {workingDirectory.absolutePath() + QDir::separator() + completeName, QString("")};
+      }
+      workingDirectory.cdUp();
+    }
+
+    workingDirectory.cdUp();
+    workingDirectory.cdUp();
+
+    if(workingDirectory.dirName() == "Bin" && workingDirectory.exists(completeName))
+    {
+      return {workingDirectory.absolutePath() + QDir::separator() + completeName, QString("")};
+    }
+  }
+#endif
+
+//#if defined (Q_OS_LINUX)
+#if 1
+  // We are on Linux - I think
+  // Try the current location of where the application was launched from which is
+  // typically the case when debugging from a build tree
+  if(workingDirectory.cd("bin"))
+  {
+    if(workingDirectory.exists(completeName))
+    {
+      return {workingDirectory.absolutePath() + QDir::separator() + completeName, QString("")};
+    }
+    workingDirectory.cdUp();
+  }
+
+  // Now try moving up a directory which is what should happen when running from a
+  // proper distribution of EMsoft
+  workingDirectory = QDir(QCoreApplication::applicationDirPath());
+  workingDirectory.cdUp();
+  if(workingDirectory.cd("bin"))
+  {
+    if(workingDirectory.exists(completeName))
+    {
+      return {workingDirectory.absolutePath() + QDir::separator() + completeName, QString("")};
+    }
+    workingDirectory.cdUp();
+  }
+#endif
+
+  if(exePath.isEmpty())
+  {
+    errMsg = QString("Could not find executable: %1").arg(completeName);
+  }
+
+  return {exePath, errMsg};
 }

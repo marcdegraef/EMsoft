@@ -35,6 +35,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <QtCore/QString>
 
 class FileIOTools
@@ -79,6 +81,13 @@ class FileIOTools
      * @return
      */
     static std::string CreateNMLEntry(const QString& key, int32_t value, bool last = false);
+
+    /**
+     * @brief GetExecutablePath
+     * @param name
+     * @return
+     */
+    static std::pair<QString, QString> GetExecutablePath(const QString& name);
 
   protected:
     FileIOTools();
