@@ -166,15 +166,16 @@ set(install_dir "bin")
 set(lib_install_dir "lib")
 
 if(APPLE)
-  get_property(DREAM3D_PACKAGE_DEST_PREFIX GLOBAL PROPERTY DREAM3D_PACKAGE_DEST_PREFIX)
-  set(install_dir "${DREAM3D_PACKAGE_DEST_PREFIX}bin")
-  set(lib_install_dir "${DREAM3D_PACKAGE_DEST_PREFIX}lib")
+  get_property(EMsoft_PACKAGE_DEST_PREFIX GLOBAL PROPERTY EMsoft_PACKAGE_DEST_PREFIX)
+  set(install_dir "${EMsoft_PACKAGE_DEST_PREFIX}bin")
+  set(lib_install_dir "${EMsoft_PACKAGE_DEST_PREFIX}lib")
 elseif(WIN32)
   set(install_dir "bin")
   set(lib_install_dir "lib")
 endif()
 
-  INSTALL(TARGETS ${PROJECT_NAME}
+
+INSTALL(TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}Targets
   COMPONENT Applications
   RUNTIME DESTINATION ${install_dir}
