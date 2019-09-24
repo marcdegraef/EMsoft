@@ -132,7 +132,8 @@ void ADPMapController::createADPMap()
 
   QSharedPointer<QProcess> avgDotProductMapProcess = QSharedPointer<QProcess>(new QProcess());
   connect(avgDotProductMapProcess.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(avgDotProductMapProcess->readAllStandardOutput().toStdString())); });
-  connect(avgDotProductMapProcess.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(avgDotProductMapProcess->readAllStandardOutput().toStdString())); });
+  connect(avgDotProductMapProcess.data(), &QProcess::readyReadStandardError,
+          [=] { emit stdOutputMessageGenerated(QString::fromStdString(avgDotProductMapProcess->readAllStandardError().toStdString())); });
   connect(avgDotProductMapProcess.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { listenADPMapFinished(exitCode, exitStatus); });
   QString adpExecutablePath = getADPMapExecutablePath();
   if (!adpExecutablePath.isEmpty())

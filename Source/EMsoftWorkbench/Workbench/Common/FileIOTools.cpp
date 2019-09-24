@@ -188,8 +188,7 @@ std::pair<QString, QString> FileIOTools::GetExecutablePath(const QString& name)
   }
 #endif
 
-//#if defined (Q_OS_LINUX)
-#if 1
+#if defined(Q_OS_LINUX)
   // We are on Linux - I think
   // Try the current location of where the application was launched from which is
   // typically the case when debugging from a build tree
