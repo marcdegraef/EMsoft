@@ -122,6 +122,28 @@ std::string FileIOTools::CreateNMLEntry(const QString& key, int32_t value, bool 
 }
 
 // -----------------------------------------------------------------------------
+std::string FileIOTools::CreateNMLEntry(const QString& key, bool value, bool last)
+{
+  std::stringstream out;
+
+  out << " " << key.toStdString() << " = ";
+  if(value)
+  {
+    out << ".TRUE.";
+  }
+  else
+  {
+    out << ".FALSE.";
+  }
+
+  if(!last)
+  {
+    out << ",";
+  }
+  return out.str();
+}
+
+// -----------------------------------------------------------------------------
 std::pair<QString, QString> FileIOTools::GetExecutablePath(const QString& name)
 {
 
