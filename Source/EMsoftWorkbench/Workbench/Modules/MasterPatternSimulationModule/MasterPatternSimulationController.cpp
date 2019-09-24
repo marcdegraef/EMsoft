@@ -37,18 +37,16 @@
 
 #include <cmath>
 #include <functional>
+#include <sstream>
+#include <utility>
 
-#include "EMsoftWrapperLib/SEM/EMsoftSEMwrappers.h"
-
+#include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
-#include <QtCore/QJsonDocument>
-#include <QtCore/QJsonObject>
-#include <QtCore/QThread>
-#include <QtNetwork/QHostInfo>
+#include <QtCore/QProcess>
 
-#include "H5Support/H5ScopedSentinel.h"
+#include "EMsoftLib/EMsoftStringConstants.h"
 
 #include "Workbench/Common/Constants.h"
 #include "Workbench/Common/EMsoftFileWriter.h"
@@ -56,18 +54,12 @@
 #include "Workbench/Common/MonteCarloFileReader.h"
 #include "Workbench/Common/ProjectionConversions.hpp"
 
-#include "EMsoftLib/EMsoftStringConstants.h"
-
-#include "H5Support/H5ScopedSentinel.h"
-#include "H5Support/QH5Lite.h"
-#include "H5Support/QH5Utilities.h"
-
 #include "EMsoftWorkbenchVersion.h"
 
 #define CL_VECTOR std::vector
 
-static size_t k_InstanceKey = 0;
-static QMap<size_t, MasterPatternSimulationController*> instances;
+static size_t s_InstanceKey = 0;
+static QMap<size_t, MasterPatternSimulationController*> s_ControllerInstances;
 
 /**
  * @brief MasterPatternSimulationControllerProgress
@@ -78,7 +70,7 @@ static QMap<size_t, MasterPatternSimulationController*> instances;
  */
 void MasterPatternSimulationControllerProgress(size_t instance, int loopCompleted, int totalLoops, int EloopCompleted, int totalEloops)
 {
-  MasterPatternSimulationController* obj = instances[instance];
+  MasterPatternSimulationController* obj = s_ControllerInstances[instance];
   if(nullptr != obj)
   {
     obj->setUpdateProgress(loopCompleted, totalLoops, EloopCompleted, totalEloops);
@@ -90,12 +82,7 @@ void MasterPatternSimulationControllerProgress(size_t instance, int loopComplete
 // -----------------------------------------------------------------------------
 MasterPatternSimulationController::MasterPatternSimulationController(QObject* parent)
 : QObject(parent)
-, m_Cancel(false)
 {
-  m_InstanceKey = ++k_InstanceKey;
-
-  m_MonteCarloReader = new MonteCarloFileReader();
-  connect(m_MonteCarloReader, &MonteCarloFileReader::errorMessageGenerated, [=](const QString& msg) { emit errorMessageGenerated(msg); });
 }
 
 // -----------------------------------------------------------------------------
@@ -103,178 +90,151 @@ MasterPatternSimulationController::MasterPatternSimulationController(QObject* pa
 // -----------------------------------------------------------------------------
 MasterPatternSimulationController::~MasterPatternSimulationController()
 {
-  k_InstanceKey--;
-  delete m_MonteCarloReader;
+  s_InstanceKey--;
 }
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void MasterPatternSimulationController::createMasterPattern(MasterPatternSimulationController::MasterPatternSimulationData simData)
+void MasterPatternSimulationController::setData(const InputDataType& data)
 {
-  {
-    QFileInfo fi(simData.inputFilePath);
-    if(fi.suffix().compare("") == 0)
-    {
-      simData.inputFilePath.append(".h5");
-    }
-  }
-  {
-    QFileInfo fi(simData.outputFilePath);
-    if(fi.suffix().compare("") == 0)
-    {
-      simData.outputFilePath.append(".h5");
-    }
-  }
+  m_InputData = data;
+}
 
-  initializeData();
-
-  //  std::cout << "Xtal name = " << XtalName << std::endl;
-
-  //  /**
-  //   * @brief save the entries in a json file for EMsoftEBSDmaster reading.
-  //   * @return
-  //   */
-  //  if (getwriteJSON())
-  //  {
-  //      EMsoftToolboxPlugin p;
-  //      QString EMDataPathName = p.getEMdatapathname();
-  //      QString EMJsonFilePath = EMDataPathName.append("/").append(getJsonFile());
-
-  //      QFileInfo fi(EMJsonFilePath);
-  //      QString parentPath = fi.path();
-  //      QDir dir;
-  //      if(!dir.mkpath(parentPath))
-  //      {
-  //        setErrorCondition(-720059);
-  //        QString ss = QObject::tr("Error creating parent path '%1'").arg(parentPath);
-  //        notifyErrorMessage(getHumanLabel(), ss, getErrorCondition());
-  //        return;
-  //      }
-
-  //      QFile saveFile(EMJsonFilePath);
-  //      saveFile.open(QIODevice::WriteOnly);
-  //      QJsonObject topObject;
-  //      QJsonObject rootObject;
-  //      rootObject.insert("npx",getNpx());
-  //      rootObject.insert("nthreads",getNthreads());
-  //      rootObject.insert("dmin",getDmin());
-  //      rootObject.insert("outname",getDataName());
-  //      topObject.insert("EBSDmastervars",rootObject);
-  //      QJsonDocument saveDoc(topObject);
-  //      saveFile.write(saveDoc.toJson());
-  //  }
-
-  QString inputFilePath = simData.inputFilePath;
-
-  // If we couldn't open the Monte Carlo file, then bail
-  if(!m_MonteCarloReader->openFile(inputFilePath))
-  {
-    return;
-  }
-
-  // If we couldn't get these three variables, then bail
-  if(!m_MonteCarloReader->getAtomPos(m_Atompos) || !m_MonteCarloReader->getAtomTypes(m_Atomtypes) || !m_MonteCarloReader->getLatticeParameters(m_Latparm))
-  {
-    return;
-  }
-
-  std::vector<int32_t> iParPtr = getIParPtr(simData);
-  if(iParPtr.empty())
-  {
-    return;
-  }
-
-  std::vector<float> fParPtr = getFParPtr(simData);
-  if(fParPtr.empty())
-  {
-    return;
-  }
-
-  // adjust the size of the mLPNH and mLPSH arrays to the correct one, since we did not have access
-  // to the sizes in the datacheck() routine
-  std::vector<size_t> dims = {static_cast<size_t>(2 * iParPtr[16] + 1), static_cast<size_t>(2 * iParPtr[16] + 1), static_cast<size_t>(iParPtr[11]), 1ULL};
-
-  size_t dimsSize = std::accumulate(dims.begin(), dims.end(), 1ULL, std::multiplies<size_t>());
-
-  std::vector<int32_t> accumzPtr = m_MonteCarloReader->getAccumzPtr();
-  if(accumzPtr.empty())
-  {
-    return;
-  }
-
-  // Create a new mLPNH Array
-  m_GenericLPNHPtr.resize(dimsSize);
-  std::fill(m_GenericLPNHPtr.begin(), m_GenericLPNHPtr.end(), 0.0f);
-
-  // Create a new mLPSH Array
-  m_GenericLPSHPtr.resize(dimsSize);
-  std::fill(m_GenericLPSHPtr.begin(), m_GenericLPSHPtr.end(), 0.0f);
-
+// -----------------------------------------------------------------------------
+void MasterPatternSimulationController::execute()
+{
+  QString dtFormat("yyyy:MM;dd hh:mm:ss.zzz");
+  QTemporaryDir tempDir;
   // Set the start time for this run (m_StartTime)
-  m_StartTime = QDateTime::currentDateTime().time().toString();
+  QString str;
+  QTextStream out(&str);
 
-  // the EMsoft call will return two arrays: mLPNH and mLPSH
-  // call the EMsoft EMsoftCgetEBSDmaster routine to compute the patterns;
-  // m_Executing enables the Cancel button to properly work by passing
-  // on a m_Cancel flag to the EMsoft routine; the m_InstanceKey provides
-  // a unique label to this particular instantiation of this filter, so that
-  // multiple simultaneous instantiations of this filter become possible without
-  // incorrect interactions between the callback routines.
-  m_Executing = true;
-  instances[m_InstanceKey] = this;
-  EMsoftCgetEBSDmaster(iParPtr.data(), fParPtr.data(), m_Atompos.data(), m_Atomtypes.data(), m_Latparm.data(), accumzPtr.data(), m_GenericLPNHPtr.data(), m_GenericLPSHPtr.data(), &MasterPatternSimulationControllerProgress, m_InstanceKey,
-                       &m_Cancel);
-  m_Executing = false;
-  instances.remove(m_InstanceKey);
-
-  // do we need to write this accumulator data into an EMsoft .h5 file?
-  // This is so that the results can be read by other EMsoft programs outside of DREAM.3D...
-  if(!m_Cancel)
+  QSharedPointer<QProcess> process = QSharedPointer<QProcess>(new QProcess());
+  connect(process.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
+  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
+  connect(process.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
+  std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
+  if(!result.first.isEmpty())
   {
-    bool success = writeEMsoftHDFFile(simData);
+    out << "Executable Path:" << result.first << "\n";
+    out << "Start Time: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz") << "\n";
+    out << "Output from " << k_ExeName << " follows next...."
+        << "\n";
+    out << "===========================================================\n";
 
-    if(!success)
-    {
-      emit stdOutputMessageGenerated("Master Pattern File Write Failed");
-    }
-    else
-    {
-      emit stdOutputMessageGenerated("Master Pattern File Write Complete");
-    }
+    emit stdOutputMessageGenerated(str);
+
+    QString nmlFilePath = tempDir.path() + QDir::separator() + k_NMLName;
+    generateNMLFile(nmlFilePath);
+    QStringList parameters = {nmlFilePath};
+    process->start(result.first, parameters);
+
+    // Wait until the QProcess is finished to exit this thread.
+    process->waitForFinished(-1);
   }
   else
   {
-    emit stdOutputMessageGenerated("Master Pattern File Generation was successfully canceled");
+    emit errorMessageGenerated(result.second);
+  }
+
+  str = "";
+  out << "===========================================================\n";
+  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz");
+  emit stdOutputMessageGenerated(str);
+
+  emit finished();
+}
+
+// -----------------------------------------------------------------------------
+void MasterPatternSimulationController::generateNMLFile(const QString& path)
+{
+  std::vector<std::string> nml;
+
+  nml.emplace_back(std::string(" &EBSDmastervars"));
+  nml.emplace_back(std::string("! smallest d-spacing to take into account [nm]"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::dmin, static_cast<float>(m_InputData.smallestDSpacing)));
+  nml.emplace_back(std::string("! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::npx, m_InputData.numOfMPPixels));
+
+  nml.emplace_back(std::string("! lattitudinal grid type:  'Lambert' or 'Legendre'"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::latgridtype, QString("Lambert")));
+
+  nml.emplace_back(std::string("! name of EMMCOpenCL output file to be used to copy the MC data from for this master pattern run;"));
+  nml.emplace_back(std::string("! This can be used to perform multiple master pattern runs starting from the same MC data set without"));
+  nml.emplace_back(std::string("! having to rerun the MC computation.  Leave this variable set to 'undefined' if not needed."));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::copyfromenergyfile, QString("undefined")));
+
+  nml.emplace_back(std::string("! if copyfromenergyfile is not 'undefined', then:"));
+  nml.emplace_back(std::string("!   - for EMsoft developers who have the EMsoft_SDK installed, the following parameter will be ignored;"));
+  nml.emplace_back(std::string("!   - all other users will need to provide the full path to the h5copy program here"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::h5copypath, QString("undefined")));
+
+  nml.emplace_back(std::string("! name of the energy statistics file produced by EMMCOpenCL program; relative to EMdatapathname;"));
+  nml.emplace_back(std::string("! this file will also contain the output data of the master program"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::energyfile, m_InputData.inputFilePath));
+  nml.emplace_back(std::string("! number of OpenMP threads"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::nthreads, m_InputData.numOfOpenMPThreads));
+  nml.emplace_back(std::string("! do you wish to receive a notification (Email or Slack) when the program completes ?"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(QString("Notify"), QString("Off")));
+  nml.emplace_back(std::string("! restart computation ?"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::restart, false));
+  nml.emplace_back(std::string("! create output file with uniform master patterns set to 1.0 (used to study background only)"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::uniform, false));
+
+  nml.emplace_back(std::string(" /"));
+
+  QFile outputFile(path);
+  if(outputFile.open(QFile::WriteOnly))
+  {
+    QTextStream out(&outputFile);
+
+    for(const auto& entry : nml)
+    {
+      out << QString::fromStdString(entry) << "\n";
+    }
+    outputFile.close();
+
+    outputFile.copy("EMEBSDmaster.nml");
+  }
+  else
+  {
+    emit errorMessageGenerated(QString("Could not create temp NML file at path %1").arg(path));
+  }
+}
+
+// -----------------------------------------------------------------------------
+void MasterPatternSimulationController::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+  m_Executing = false;
+  s_ControllerInstances.remove(m_InstanceKey);
+
+  // do we need to write this accumulator data into an EMsoft .h5 file?
+  // This is so that the results can be read by other EMsoft programs outside of DREAM.3D...
+  if(m_Cancel)
+  {
+    emit stdOutputMessageGenerated(QString("%1 was canceled.").arg(k_ExeName));
+  }
+
+  if(exitStatus == QProcess::CrashExit)
+  {
+    emit stdOutputMessageGenerated(QString("%1n process crashed with exit code %2").arg(k_ExeName).arg(exitCode));
+  }
+
+  if(exitStatus == QProcess::NormalExit)
+  {
+    emit stdOutputMessageGenerated(QString("%1 Completed").arg(k_ExeName));
   }
 }
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void MasterPatternSimulationController::initializeData()
-{
-  m_Atompos.clear();
-  m_Atomtypes.clear();
-  m_Latparm.clear();
-  m_GenericAccumzPtr.clear();
-  m_StartTime = "";
-  m_CrystalSystem = 0;
-  m_Natomtypes = 0;
-  m_SpaceGroupNumber = 0;
-  m_SpaceGroupSetting = 0;
-  m_Executing = false;
-  m_Cancel = false;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-bool MasterPatternSimulationController::validateMasterPatternValues(MasterPatternSimulationController::MasterPatternSimulationData data) const
+bool MasterPatternSimulationController::validateInput() const
 {
   bool valid = true;
 
-  QString inputPath = data.inputFilePath;
+  QString inputPath = m_InputData.inputFilePath;
   QFileInfo inFi(inputPath);
   if(inFi.completeSuffix() != "h5")
   {
@@ -289,7 +249,7 @@ bool MasterPatternSimulationController::validateMasterPatternValues(MasterPatter
     valid = false;
   }
 
-  QString outputPath = data.outputFilePath;
+  QString outputPath = m_InputData.outputFilePath;
 
   QFileInfo dir(outputPath);
   QDir dPath = dir.path();
@@ -303,14 +263,14 @@ bool MasterPatternSimulationController::validateMasterPatternValues(MasterPatter
     emit warningMessageGenerated(ss);
   }
 
-  if(data.smallestDSpacing < 0)
+  if(m_InputData.smallestDSpacing < 0)
   {
     QString ss = QObject::tr("dmin must be positive (see also help page)");
     emit errorMessageGenerated(ss);
     valid = false;
   }
 
-  if(data.numOfMPPixels < 0)
+  if(m_InputData.numOfMPPixels < 0)
   {
     QString ss = QObject::tr("Number of pixels must be positive");
     emit errorMessageGenerated(ss);
@@ -318,13 +278,13 @@ bool MasterPatternSimulationController::validateMasterPatternValues(MasterPatter
   }
 
   // test the Bethe Parameters (must be in increasing order)
-  if((data.betheParametersX > data.betheParametersY) || (data.betheParametersY > data.betheParametersZ))
+  if((m_InputData.betheParametersX > m_InputData.betheParametersY) || (m_InputData.betheParametersY > m_InputData.betheParametersZ))
   {
     QString ss = QObject::tr("Bethe parameters must be listed from smallest to largest (see help page)");
     emit errorMessageGenerated(ss);
     valid = false;
   }
-  if(data.betheParametersX < 0.0)
+  if(m_InputData.betheParametersX < 0.0)
   {
     QString ss = QObject::tr("All Bethe parameters must be positive (see help page)");
     emit errorMessageGenerated(ss);
@@ -332,857 +292,6 @@ bool MasterPatternSimulationController::validateMasterPatternValues(MasterPatter
   }
 
   return valid;
-}
-
-// -----------------------------------------------------------------------------
-//  This routine creates an EMsoft h5 file with the master pattern data in it, so
-//  that EMEBSD and similar programs can read it... This is not precisely the same
-//  file as would be written by the EMEBSDmaster program, since the JSONfiles group
-//  actually contains a complete (serialized) json file instead of a namelist file; this is not
-//  a problem, since all the entries in the json/nml file are explicitly parsed out
-//  in the NMLparameters group anyway...
-// -----------------------------------------------------------------------------
-bool MasterPatternSimulationController::writeEMsoftHDFFile(const MasterPatternSimulationController::MasterPatternSimulationData& simData) const
-{
-  QString inputFilePath = simData.inputFilePath;
-  QString outputFilePath = simData.outputFilePath;
-  QString tmpOutputFilePath = outputFilePath + ".tmp";
-  QFileInfo tmpFi(tmpOutputFilePath);
-
-  if(tmpFi.exists())
-  {
-    if(!QFile::remove(tmpOutputFilePath))
-    {
-      QString ss = QObject::tr("Error removing temporary output file '%1'").arg(tmpFi.fileName());
-      emit errorMessageGenerated(ss);
-      return false;
-    }
-  }
-
-  if(!QFile::copy(inputFilePath, tmpOutputFilePath))
-  {
-    QString ss = QObject::tr("Error copying input to temporary output file '%1'").arg(tmpFi.fileName());
-    emit errorMessageGenerated(ss);
-    return false;
-  }
-
-  QSharedPointer<EMsoftFileWriter> writer = QSharedPointer<EMsoftFileWriter>(new EMsoftFileWriter());
-  connect(writer.data(), &EMsoftFileWriter::errorMessageGenerated, [=](const QString& msg) { emit errorMessageGenerated(msg); });
-
-  // Open the HDF5 file
-  if(!writer->openFile(tmpOutputFilePath))
-  {
-    return false;
-  }
-
-  // Get the iPar and fPar arrays
-  std::vector<int32_t> genericIParPtr = getIParPtr(simData);
-  std::vector<float> genericFParPtr = getFParPtr(simData);
-  if(genericIParPtr.empty() || genericFParPtr.empty())
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  //--------------------------------
-  // Create the EMData/EBSDmaster group
-  if(!writer->openGroup(EMsoft::Constants::EMData))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  if(genericIParPtr[13] == 1)
-  {
-    if(!writer->openGroup(EMsoft::Constants::EBSDmaster))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-  else
-  {
-    if(!writer->openGroup(EMsoft::Constants::ECPmaster))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-
-  // we use the standard names "mLPNH" and "mLPSH", regardless of what the user entered for this array name;
-  // the user-defined name is only relevant within DREAM.3D
-  {
-    QVector<hsize_t> dims{static_cast<hsize_t>(genericIParPtr[8]),           // number of atom types
-                          static_cast<hsize_t>(genericIParPtr[11]),          // number of energy bins
-                          static_cast<hsize_t>(2 * genericIParPtr[16] + 1),  // number of x pixels
-                          static_cast<hsize_t>(2 * genericIParPtr[16] + 1)}; // number of y pixels
-
-    if(!writer->writePointerDataset(EMsoft::Constants::mLPNH, m_GenericLPNHPtr.data(), dims.toStdVector()))
-    {
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-
-    // Create the stereographic northern hemisphere master pattern
-    dims.pop_front();
-    size_t zDim = dims[0];
-    std::vector<float> genericSPNHPtr;
-    size_t offset = 0;
-    for(size_t z = 0; z < zDim; z++)
-    {
-      ProjectionConversions projConversion;
-      std::vector<float> conversion =
-          projConversion.convertLambertSquareData<float>(m_GenericLPNHPtr, dims[2], ModifiedLambertProjection::ProjectionType::Stereographic, z, ModifiedLambertProjection::Square::NorthSquare);
-
-      genericSPNHPtr.resize(genericSPNHPtr.size() + conversion.size());
-      for(const float &value : conversion)
-      {
-        genericSPNHPtr.at(offset) = value;
-        offset++;
-      }
-    }
-
-    // Write the stereographic northern hemisphere master pattern to the file
-    if(!writer->writePointerDataset(EMsoft::Constants::masterSPNH, genericSPNHPtr.data(), dims.toStdVector()))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-
-  {
-    std::vector<hsize_t> dims = {static_cast<hsize_t>(genericIParPtr[8]) // number of atom types
-                                 ,
-                                 static_cast<hsize_t>(genericIParPtr[11]) // number of energy bins
-                                 ,
-                                 static_cast<hsize_t>(2 * genericIParPtr[16] + 1) // number of x pixels
-                                 ,
-                                 static_cast<hsize_t>(2 * genericIParPtr[16] + 1)}; // number of y pixels
-
-    if(!writer->writePointerDataset(EMsoft::Constants::mLPSH, m_GenericLPSHPtr.data(), dims))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-
-    // Create the stereographic southern hemisphere master pattern
-    dims = {static_cast<hsize_t>(genericIParPtr[11]) // number of energy bins
-            ,
-            static_cast<hsize_t>(2 * genericIParPtr[16] + 1) // number of x pixels
-            ,
-            static_cast<hsize_t>(2 * genericIParPtr[16] + 1)};
-    size_t zDim = dims[0];
-    std::vector<float> genericSPSHPtr(0);
-    size_t offset = 0;
-    for(size_t z = 0; z < zDim; z++)
-    {
-      ProjectionConversions projConversion;
-      std::vector<float> conversion =
-          projConversion.convertLambertSquareData<float>(m_GenericLPSHPtr, dims[2], ModifiedLambertProjection::ProjectionType::Stereographic, z, ModifiedLambertProjection::Square::NorthSquare);
-
-      genericSPSHPtr.resize(genericSPSHPtr.size() + conversion.size());
-      for(const float &value : conversion)
-      {
-        genericSPSHPtr.at(offset) = value;
-        offset++;
-      }
-    }
-
-    // Write the stereographic southern hemisphere master pattern to a file
-    if(!writer->writePointerDataset(EMsoft::Constants::masterSPSH, genericSPSHPtr.data(), dims))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-
-  // and a few constants
-  std::string dname;
-  if(genericIParPtr[13] == 1)
-  {
-    if(!writer->writeScalarDataset(EMsoft::Constants::numEbins, genericIParPtr[11]))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-
-    int i = 1;
-    if(!writer->writeScalarDataset(EMsoft::Constants::lastEnergy, i))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-
-    std::vector<hsize_t> cDims(1, 1);
-    cDims[0] = 4;
-    std::vector<float> BP(cDims[0]);
-    BP[0] = simData.betheParametersX;
-    BP[1] = simData.betheParametersY;
-    BP[2] = simData.betheParametersZ;
-    BP[3] = 1.0;
-
-    if(!writer->writeVectorDataset(EMsoft::Constants::BetheParameters, BP, cDims))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-
-    cDims[0] = static_cast<hsize_t>(genericIParPtr[11]);
-    std::vector<float> EkeV(cDims[0]);
-    for(hsize_t i = 0; i < static_cast<hsize_t>(genericIParPtr[11]); i++)
-    {
-      EkeV[i] = genericFParPtr[3] + static_cast<float>(i) * genericFParPtr[4];
-    }
-
-    if(!writer->writeVectorDataset(EMsoft::Constants::EkeVs, EkeV, cDims))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-  else
-  {
-    double ekev;
-    if(!m_MonteCarloReader->getAcceleratingVoltage(ekev))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-    if(!writer->writeScalarDataset(EMsoft::Constants::EkeV, ekev))
-    {
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-
-  if(!writer->writeScalarDataset(EMsoft::Constants::numset, genericIParPtr[8]))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  QString xtalFileName = "";
-  if(!m_MonteCarloReader->getXtalFileName(xtalFileName))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  dname = EMsoft::Constants::xtalname.toStdString();
-  if(!writer->writeStringDataset(EMsoft::Constants::xtalname, xtalFileName))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Close the groups
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    return false;
-  }
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    return false;
-  }
-
-  //--------------------------------
-  // Create the EMheader group; this is common to all EMsoft output files, so in the future
-  // we will move this to the EMsoftToolboxPlugin.cpp file
-  if(!writer->openGroup(EMsoft::Constants::EMheader))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->openGroup(EMsoft::Constants::EBSDmaster))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Date  (use QDateTime)
-  QString date = QDateTime::currentDateTime().date().toString();
-  if(!writer->writeStringDataset(EMsoft::Constants::Date, date))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // StartTime, already defined in Execute()
-  if(!writer->writeStringDataset(EMsoft::Constants::StartTime, m_StartTime))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // StopTime
-  QString time = QDateTime::currentDateTime().time().toString();
-  if(!writer->writeStringDataset(EMsoft::Constants::StopTime, time))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Hostname
-  QString localHost = QHostInfo::localHostName();
-  if(!writer->writeStringDataset(EMsoft::Constants::HostName, localHost))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // ProgramName
-  QString programName = "EMsoftWorkbench Master Pattern Simulation Module";
-  if(!writer->writeStringDataset(EMsoft::Constants::ProgramName, programName))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // UserName
-  if(!writer->writeStringDataset(EMsoft::Constants::UserName, getEMsoftUserName()))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // UserEmail
-  if(!writer->writeStringDataset(EMsoft::Constants::UserEmail, getEMsoftUserEmail()))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // UserLocation
-  if(!writer->writeStringDataset(EMsoft::Constants::UserLocation, getEMsoftUserLocation()))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Version
-  QString version = EMsoftWorkbench::Version::Complete();
-  if(!writer->writeStringDataset(EMsoft::Constants::Version, version))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // add the FixedLength identifier to this header
-  // FixedLength
-  int i = 1;
-  if(!writer->writeScalarDataset(EMsoft::Constants::FixedLength, i))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Close the groups
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    return false;
-  }
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    return false;
-  }
-
-  //--------------------------------
-  // here we create a JSONfiles group that contains the jsonobject in its entirety
-  if(!writer->openGroup(EMsoft::Constants::NMLfiles))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  std::vector<std::string> nml;
-
-  nml.emplace_back(std::string(" &EBSDmastervars"));
-  nml.emplace_back(std::string("! smallest d-spacing to take into account [nm]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::dmin, simData.smallestDSpacing));
-  nml.emplace_back(std::string("! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::npx, simData.numOfMPPixels));
-  nml.emplace_back(std::string("! name of EMMCOpenCL output file to be used to copy the MC data from for this master pattern run;"));
-  nml.emplace_back(std::string("! This can be used to perform multiple master pattern runs starting from the same MC data set without"));
-  nml.emplace_back(std::string("! having to rerun the MC computation.  Leave this variable set to 'undefined' if not needed."));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::copyfromenergyfile, {"undefined"}));
-  nml.emplace_back(std::string("! name of the energy statistics file produced by EMMCOpenCL program; relative to EMdatapathname;"));
-  nml.emplace_back(std::string("! this file will also contain the output data of the master program"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::energyfile, simData.inputFilePath));
-  nml.emplace_back(std::string("! number of OpenMP threads"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::nthreads, simData.numOfOpenMPThreads));
-  nml.emplace_back(std::string("! do you wish to receive a notification (Email or Slack) when the program completes ?"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry({"Notify"}, {"Off"}));
-  nml.emplace_back(std::string("! restart computation ?"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::restart, {".FALSE."}));
-  nml.emplace_back(std::string("! create output file with uniform master patterns set to 1.0 (used to study background only)"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::uniform, {".FALSE."}));
-
-  nml.emplace_back(std::string(" /"));
-
-  hid_t locID = writer->getCurrentLocId();
-  herr_t err = H5Lite::writeVectorOfStringsDataset(locID, EMsoft::Constants::EBSDmasterNML.toStdString(), nml);
-
-  if(err < 0)
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Close the group
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    return false;
-  }
-
-  //--------------------------------
-  // Create the NMLparameters group
-  if(!writer->openGroup(EMsoft::Constants::NMLparameters))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->openGroup(EMsoft::Constants::BetheList))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  if(!writer->writeScalarDataset(EMsoft::Constants::c1, simData.betheParametersX))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->writeScalarDataset(EMsoft::Constants::c2, simData.betheParametersY))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->writeScalarDataset(EMsoft::Constants::c3, simData.betheParametersZ))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  float val = 1.0f;
-  if(!writer->writeScalarDataset(EMsoft::Constants::sgdbdiff, val))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Close the group
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    return false;
-  }
-
-  //--------------------------------
-  // Create the EBSDMasterNameList group
-  if(!writer->openGroup(EMsoft::Constants::EBSDMasterNameList))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  if(!writer->writeScalarDataset(EMsoft::Constants::dmin, simData.smallestDSpacing))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->writeScalarDataset(EMsoft::Constants::npx, simData.numOfMPPixels))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->writeScalarDataset(EMsoft::Constants::nthreads, simData.numOfOpenMPThreads))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  i = 0;
-  if(!writer->writeScalarDataset(EMsoft::Constants::restart, i))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  i = -1;
-  if(!writer->writeScalarDataset(EMsoft::Constants::Esel, i))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  i = 6;
-  if(!writer->writeScalarDataset(EMsoft::Constants::Stdout, i))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->writeStringDataset(EMsoft::Constants::outname, simData.outputFilePath))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  int uniform = 0;
-  if(!writer->writeScalarDataset(EMsoft::Constants::uniform, uniform))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // and finally the energy (Monte Carlo) file name
-  if(!writer->writeStringDataset(EMsoft::Constants::energyfile, simData.inputFilePath))
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Close the groups
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-  if(!writer->closeGroup())
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  // Close the file
-  if(!writer->closeFile())
-  {
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  if(!m_MonteCarloReader->closeFile())
-  {
-    QString ss = QObject::tr("Input file was not closed.");
-    emit errorMessageGenerated(ss);
-    return false;
-  }
-
-  QFileInfo outFi(outputFilePath);
-  if(outFi.exists())
-  {
-    std::cout << "outputFilePath: " << outputFilePath.toStdString() << std::endl;
-    QFile fud(outputFilePath);
-    if(!fud.remove())
-    {
-      std::cout << "Error String: " << fud.errorString().toStdString() << std::endl;
-
-      QString ss = QObject::tr("Error deleting existing output file. Error reported was: '%1'").arg(fud.errorString());
-      emit errorMessageGenerated(ss);
-      writer->closeFile();
-      QFile::remove(tmpOutputFilePath);
-      return false;
-    }
-  }
-
-  if(!QFile::rename(tmpOutputFilePath, outputFilePath))
-  {
-    QString ss = QObject::tr("Error renaming temp file to output file '%1' -> '%2'").arg(tmpOutputFilePath).arg(outputFilePath);
-    emit errorMessageGenerated(ss);
-    writer->closeFile();
-    QFile::remove(tmpOutputFilePath);
-    return false;
-  }
-
-  return true;
-}
-
-int MasterPatternSimulationController::getNumCPUCores() const
-{
-  return QThread::idealThreadCount();
-}
-#if 0
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-int MasterPatternSimulationController::getnumCLPlatforms()
-{
-  std::vector<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-
-  return int (platforms.size());
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-QStringList MasterPatternSimulationController::getPlatformInfo()
-{
-  QStringList platformInfos;
-  CL_VECTOR<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-  QString str;
-  QTextStream out(&str);
-  for(size_t i = 0; i < platforms.size(); i++)
-  {
-    cl::Platform curPlat = platforms[i];
-    QString ss = QObject::tr("Platform ");
-    ss.append(QString::number(i + 1));
-    ss.append(": ");
-    QString tt = QString::fromStdString(curPlat.getInfo<CL_PLATFORM_NAME>());
-    ss.append(tt);
-    platformInfos.push_back(ss);
-  }
-  return platformInfos;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-int MasterPatternSimulationController::getNumCPUCores(int platformID)
-{
-  CL_VECTOR<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-  if (platformID > platforms.size()) {
-    return -1020;
-  }
-  cl::Platform selectedPlatform = platforms[platformID-1];
-
-  CL_VECTOR<cl::Device> devices;
-  selectedPlatform.getDevices(CL_DEVICE_TYPE_CPU, &devices);
-  int numCores = 0;
-  if (devices.size() > 0)
-  {
-	  cl::Device curDev = devices[0];
-	  numCores = curDev.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-  }
-  return numCores;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void MasterPatternSimulationController::writePlatformInfo()
-{
-  std::vector<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-
-  for(size_t i=0; i<platforms.size(); i++){
-    cl::Platform curPlat = platforms[i];
-    QString ss = QObject::tr("Platform %1 info: ").arg(QString::number(i+1));
-    QString tt = QString::fromStdString(curPlat.getInfo<CL_PLATFORM_NAME>());
-    ss.append(tt);
-    std::cout << ss.toStdString();
-  }
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-int MasterPatternSimulationController::getnumCLDevices(int platformID)
-{
-  std::vector<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-  if (platformID > platforms.size()) {
-    return -1000;
-  }
-  cl::Platform selectedPlatform = platforms[platformID - 1];
-
-  std::vector<cl::Device> devices;
-  selectedPlatform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-  return int (devices.size());
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void MasterPatternSimulationController::writeDeviceInfo(int platformID)
-{
-  std::vector<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-  cl::Platform selectedPlatform = platforms[platformID-1];
-
-  std::vector<cl::Device> devices;
-  selectedPlatform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-  for(int i=0; i<devices.size(); i++){
-    cl::Device curDev = devices[i];
-    QString ss = QObject::tr("Device %1 info: ").arg(QString::number(i+1));
-    QString tt = QString::fromStdString(curDev.getInfo<CL_DEVICE_NAME>());
-    ss.append(tt);
-    std::cout << ss.toStdString();
-  }
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-QStringList MasterPatternSimulationController::getDeviceInfo(int platformID)
-{
-  QStringList deviceInfos;
-
-  CL_VECTOR<cl::Platform> platforms;
-  cl::Platform::get(&platforms);
-  cl::Platform selectedPlatform = platforms[platformID - 1];
-
-  CL_VECTOR<cl::Device> devices;
-  selectedPlatform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-  for(int i = 0; i < devices.size(); i++)
-  {
-    cl::Device curDev = devices[i];
-    QString ss = QObject::tr("GPU Device ");
-    ss.append(QString::number(i + 1));
-    ss.append(": ");
-    QString tt = QString::fromStdString(curDev.getInfo<CL_DEVICE_NAME>());
-    ss.append(tt);
-    deviceInfos.push_back(ss);
-  }
-  return deviceInfos;
-}
-#endif
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-QString MasterPatternSimulationController::getEMsoftUserName() const
-{
-  // get the UserName
-  std::string homeFolder = QDir::homePath().toStdString();
-  std::string configFile = homeFolder + "/.config/EMsoft/EMsoftConfig.json";
-  QString val;
-  QFile envFile(QString::fromStdString(configFile));
-  envFile.open(QIODevice::ReadOnly);
-  val = envFile.readAll();
-  envFile.close();
-
-  QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
-  QJsonObject s = d.object();
-  QJsonValue EMdatapathname = s.value(QString("UserName"));
-  return QString(EMdatapathname.toString());
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-QString MasterPatternSimulationController::getEMsoftUserEmail() const
-{
-  // get the UserEmail
-  std::string homeFolder = QDir::homePath().toStdString();
-  std::string configFile = homeFolder + "/.config/EMsoft/EMsoftConfig.json";
-  QString val;
-  QFile envFile(QString::fromStdString(configFile));
-  envFile.open(QIODevice::ReadOnly);
-  val = envFile.readAll();
-  envFile.close();
-
-  QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
-  QJsonObject s = d.object();
-  QJsonValue EMdatapathname = s.value(QString("UserEmail"));
-  return QString(EMdatapathname.toString());
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-QString MasterPatternSimulationController::getEMsoftUserLocation() const
-{
-  // get the UserLocation
-  std::string homeFolder = QDir::homePath().toStdString();
-  std::string configFile = homeFolder + "/.config/EMsoft/EMsoftConfig.json";
-  QString val;
-  QFile envFile(QString::fromStdString(configFile));
-  envFile.open(QIODevice::ReadOnly);
-  val = envFile.readAll();
-  envFile.close();
-
-  QJsonDocument d = QJsonDocument::fromJson(val.toUtf8());
-  QJsonObject s = d.object();
-  QJsonValue EMdatapathname = s.value(QString("UserLocation"));
-  return QString(EMdatapathname.toString());
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-std::vector<int32_t> MasterPatternSimulationController::getIParPtr(MasterPatternSimulationController::MasterPatternSimulationData simData) const
-{
-  std::vector<int32_t> iParPtr = m_MonteCarloReader->getIParPtr();
-  if(iParPtr.empty())
-  {
-    return std::vector<int32_t>();
-  }
-
-  iParPtr[16] = static_cast<int32_t>(simData.numOfMPPixels);      // number of pixels in master pattern
-  iParPtr[17] = static_cast<int32_t>(simData.numOfOpenMPThreads); // number of OpenMP threads to be used
-
-  return iParPtr;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-std::vector<float> MasterPatternSimulationController::getFParPtr(MasterPatternSimulationController::MasterPatternSimulationData simData) const
-{
-  std::vector<float> fParPtr = m_MonteCarloReader->getFParPtr();
-  if(fParPtr.empty())
-  {
-    return std::vector<float>();
-  }
-
-  fParPtr[10] = static_cast<float>(simData.smallestDSpacing);
-  fParPtr[11] = static_cast<float>(simData.betheParametersX);
-  fParPtr[12] = static_cast<float>(simData.betheParametersY);
-  fParPtr[13] = static_cast<float>(simData.betheParametersZ);
-
-  return fParPtr;
 }
 
 // -----------------------------------------------------------------------------

@@ -37,6 +37,7 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QProcess>
+#include <QtCore/QString>
 #include <QtCore/QTemporaryDir>
 
 class XtalFileReader;
@@ -58,6 +59,12 @@ public:
   {
     EBSD,
     ECP
+  };
+
+  enum class StringType : EnumType
+  {
+    OpenCLFolder = 22,
+    RandomSeedsFile = 25
   };
 
   /**
@@ -98,12 +105,6 @@ public:
     QString outputFilePath;
   };
 
-  enum class StringType : EnumType
-  {
-    OpenCLFolder = 22,
-    RandomSeedsFile = 25
-  };
-
   /**
    * @brief setData
    * @param simData
@@ -111,11 +112,11 @@ public:
   void setData(const InputDataType& simData);
 
   /**
-   * @brief validateMonteCarloValues
+   * @brief validateInput
    * @param data
    * @return
    */
-  bool validateMonteCarloValues() const;
+  bool validateInput() const;
 
   /**
    * @brief setUpdateProgress
@@ -128,8 +129,7 @@ public:
 public slots:
 
   /**
-   * @brief createMonteCarlo
-   * @param simData
+   * @brief execute
    */
   void execute();
 
@@ -141,8 +141,10 @@ signals:
   void warningMessageGenerated(const QString& msg) const;
   void errorMessageGenerated(const QString& msg) const;
   void stdOutputMessageGenerated(const QString& msg) const;
-  void updateMCProgress(int loop, int totalLoops, float bseYield) const;
+
   void finished();
+
+  void updateMCProgress(int loop, int totalLoops, float bseYield) const;
 
 private:
   bool m_Cancel = false;

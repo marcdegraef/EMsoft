@@ -83,6 +83,15 @@ class FileIOTools
     static std::string CreateNMLEntry(const QString& key, int32_t value, bool last = false);
 
     /**
+     * @brief CreateNMLEntry
+     * @param key
+     * @param value
+     * @param last
+     * @return
+     */
+    static std::string CreateNMLEntry(const QString& key, bool value, bool last = false);
+
+    /**
      * @brief GetExecutablePath
      * @param name
      * @return

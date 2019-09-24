@@ -238,7 +238,7 @@ void MonteCarloSimulation_UI::validateData()
   MonteCarloSimulationController::InputDataType data = getCreationData();
   MonteCarloSimulationController controller;
   controller.setData(data);
-  if(controller.validateMonteCarloValues())
+  if(controller.validateInput())
   {
     createMonteCarloBtn->setEnabled(true);
   }

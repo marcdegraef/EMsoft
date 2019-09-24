@@ -107,7 +107,6 @@ private:
   QSharedPointer<QThread> m_WorkerThread;
 
   QString m_LastFilePath = "";
-  //  QSharedPointer<QFutureWatcher<void>> m_Watcher;
 
   /**
    * @brief readCrystalSystemParameters

@@ -41,29 +41,17 @@
 #include <sstream>
 #include <utility>
 
-//#include "EMsoftWrapperLib/SEM/EMsoftSEMwrappers.h"
-
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDateTime>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
-#include <QtCore/QJsonDocument>
-#include <QtCore/QJsonObject>
 #include <QtCore/QProcess>
+
+#include "EMsoftLib/EMsoftStringConstants.h"
 
 #include "Workbench/Common/Constants.h"
 #include "Workbench/Common/EMsoftFileWriter.h"
 #include "Workbench/Common/FileIOTools.h"
-#include "Workbench/Common/XtalFileReader.h"
-#include "Workbench/Modules/cl.hpp"
-
-#include "EMsoftLib/EMsoftStringConstants.h"
-
-#include "H5Support/H5ScopedSentinel.h"
-#include "H5Support/QH5Lite.h"
-#include "H5Support/QH5Utilities.h"
-
-#define CL_VECTOR std::vector
 
 namespace ioConstants = EMsoftWorkbenchConstants::IOStrings;
 
@@ -117,9 +105,6 @@ void MonteCarloSimulationController::execute()
   // Set the start time for this run (m_StartTime)
   QString str;
   QTextStream out(&str);
-  out << "<===========================================================>\n";
-  out << "MonteCarlo simulation started: " << QDateTime::currentDateTime().toString();
-  emit stdOutputMessageGenerated(str);
 
   QSharedPointer<QProcess> process = QSharedPointer<QProcess>(new QProcess());
   connect(process.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
@@ -128,6 +113,13 @@ void MonteCarloSimulationController::execute()
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())
   {
+    out << "Executable Path:" << result.first << "\n";
+    out << "Start Time: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz") << "\n";
+    out << "Output from " << k_ExeName << " follows next...."
+        << "\n";
+    out << "===========================================================\n";
+
+    emit stdOutputMessageGenerated(str);
     QString nmlFilePath = tempDir.path() + QDir::separator() + k_NMLName;
     generateNMLFile(nmlFilePath);
     QStringList parameters = {nmlFilePath};
@@ -142,7 +134,8 @@ void MonteCarloSimulationController::execute()
   }
 
   str = "";
-  out << "MonteCarlo simulation finished: " << QDateTime::currentDateTime().toString();
+  out << "===========================================================\n";
+  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz");
   emit stdOutputMessageGenerated(str);
 
   emit finished();
@@ -226,24 +219,24 @@ void MonteCarloSimulationController::processFinished(int exitCode, QProcess::Exi
   // This is so that the results can be read by other EMsoft programs outside of DREAM.3D...
   if(m_Cancel)
   {
-    emit stdOutputMessageGenerated(QString("MonteCarlo Simulation was canceled."));
+    emit stdOutputMessageGenerated(QString("%1 was canceled.").arg(k_ExeName));
   }
 
   if(exitStatus == QProcess::CrashExit)
   {
-    emit stdOutputMessageGenerated(QString("MonteCarlo Simulation process crashed with exit code %1").arg(exitCode));
+    emit stdOutputMessageGenerated(QString("%1n process crashed with exit code %2").arg(k_ExeName).arg(exitCode));
   }
 
   if(exitStatus == QProcess::NormalExit)
   {
-    emit stdOutputMessageGenerated("MonteCarlo Simulation Completed");
+    emit stdOutputMessageGenerated(QString("%1 Completed").arg(k_ExeName));
   }
 }
 
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-bool MonteCarloSimulationController::validateMonteCarloValues() const
+bool MonteCarloSimulationController::validateInput() const
 {
   if(m_InputData.inputFilePath.isEmpty())
   {
