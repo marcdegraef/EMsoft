@@ -3746,14 +3746,21 @@ character(fnlen)        :: masterfileA
 character(fnlen)        :: masterfileB
 character(fnlen)        :: masterfileC
 character(fnlen)        :: masterfileD
+<<<<<<< HEAD
 character(fnlen)        :: h5copypath
+=======
+>>>>>>> adds two additional variants to the EMEBSDoverlap master pattern program
 character(fnlen)        :: overlapmode
 character(fnlen)        :: datafile
 
 ! define the IO namelist to facilitate passing variables to the program.
 namelist  / EBSDoverlapdata / stdout, PatternAxisA, tA, tB, gA, gB, masterfileA, masterfileB, & 
                               datafile, HorizontalAxisA, overlapmode, newpgnum, tC, gC, tD, gD, fracB, &
+<<<<<<< HEAD
                               fracC, fracD, masterfileC, masterfileD, gA2, gA3, tA2, tA3, h5copypath
+=======
+                              fracC, fracD, masterfileC, masterfileD, gA2, gA3, tA2, tA3
+>>>>>>> adds two additional variants to the EMEBSDoverlap master pattern program
 
 ! set the input parameters to default values (except for xtalname, which must be present)
 stdout          = 6
@@ -3779,7 +3786,10 @@ masterfileA     = 'undefined'   ! filename
 masterfileB     = 'undefined'   ! filename
 masterfileC     = 'undefined'   ! filename
 masterfileD     = 'undefined'   ! filename
+<<<<<<< HEAD
 h5copypath      = 'undefined'   ! filename
+=======
+>>>>>>> adds two additional variants to the EMEBSDoverlap master pattern program
 datafile        = 'undefined'   ! output file name
 overlapmode     = 'series'      ! options are 'full' or 'series'
 
@@ -3831,7 +3841,10 @@ enl%masterfileA = masterfileA
 enl%masterfileB = masterfileB
 enl%masterfileC = masterfileC
 enl%masterfileD = masterfileD
+<<<<<<< HEAD
 enl%h5copypath = h5copypath
+=======
+>>>>>>> adds two additional variants to the EMEBSDoverlap master pattern program
 enl%datafile = datafile
 enl%overlapmode = overlapmode
 
