@@ -104,7 +104,8 @@ void MasterPatternSimulationController::setData(const InputDataType& data)
 // -----------------------------------------------------------------------------
 void MasterPatternSimulationController::execute()
 {
-  QString dtFormat("yyyy:MM;dd hh:mm:ss.zzz");
+  QString dtFormat("yyyy:MM:dd hh:mm:ss.zzz");
+
   QTemporaryDir tempDir;
   // Set the start time for this run (m_StartTime)
   QString str;
@@ -117,8 +118,12 @@ void MasterPatternSimulationController::execute()
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())
   {
+    QProcessEnvironment env = process->processEnvironment();
+    env.insert("EMSOFTPATHNAME", QString::fromStdString(FileIOTools::GetEMsoftPathName()));
+    process->setProcessEnvironment(env);
     out << "Executable Path:" << result.first << "\n";
-    out << "Start Time: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz") << "\n";
+    out << "Start Time: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
+    out << "Insert EMSOFTPATHNAME=" << QString::fromStdString(FileIOTools::GetEMsoftPathName()) << "\n";
     out << "Output from " << k_ExeName << " follows next...."
         << "\n";
     out << "===========================================================\n";
@@ -140,7 +145,7 @@ void MasterPatternSimulationController::execute()
 
   str = "";
   out << "===========================================================\n";
-  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz");
+  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString(dtFormat);
   emit stdOutputMessageGenerated(str);
 
   emit finished();
