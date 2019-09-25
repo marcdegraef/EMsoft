@@ -98,6 +98,12 @@ class FileIOTools
      */
     static std::pair<QString, QString> GetExecutablePath(const QString& name);
 
+    /**
+     * @brief GetEMsoftPathName
+     * @return
+     */
+    static std::string GetEMsoftPathName();
+
   protected:
     FileIOTools();
 

@@ -144,6 +144,32 @@ std::string FileIOTools::CreateNMLEntry(const QString& key, bool value, bool las
 }
 
 // -----------------------------------------------------------------------------
+std::string FileIOTools::GetEMsoftPathName()
+{
+  QDir workingDirectory = QDir(QCoreApplication::applicationDirPath());
+#if defined(Q_OS_MAC)
+  // Let's assume we start out in the .app package.
+  if(workingDirectory.dirName() == "MacOS")
+  {
+    workingDirectory.cdUp();
+    if(workingDirectory.exists("bin") && workingDirectory.cd("bin"))
+    {
+      return workingDirectory.absolutePath().toStdString();
+    }
+    workingDirectory.cdUp();
+    workingDirectory.cdUp();
+    // We should now be out of the app package and this assumes we are running from an IDE
+    // so we are in the build folder.
+    if(workingDirectory.exists("opencl"))
+    {
+      return workingDirectory.absolutePath().toStdString();
+    }
+  }
+#endif
+  return workingDirectory.absolutePath().toStdString();
+}
+
+// -----------------------------------------------------------------------------
 std::pair<QString, QString> FileIOTools::GetExecutablePath(const QString& name)
 {
 
