@@ -46,6 +46,7 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QProcess>
+#include <QtCore/QProcessEnvironment>
 
 #include "EMsoftLib/EMsoftStringConstants.h"
 
@@ -101,6 +102,8 @@ void MonteCarloSimulationController::setData(const InputDataType& data)
 // -----------------------------------------------------------------------------
 void MonteCarloSimulationController::execute()
 {
+  QString dtFormat("yyyy:MM:dd hh:mm:ss.zzz");
+
   QTemporaryDir tempDir;
   // Set the start time for this run (m_StartTime)
   QString str;
@@ -113,13 +116,18 @@ void MonteCarloSimulationController::execute()
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())
   {
+    QProcessEnvironment env = process->processEnvironment();
+    env.insert("EMSOFTPATHNAME", QString::fromStdString(FileIOTools::GetEMsoftPathName()));
+    process->setProcessEnvironment(env);
     out << "Executable Path:" << result.first << "\n";
-    out << "Start Time: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz") << "\n";
+    out << "Start Time: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
+    out << "Insert EMSOFTPATHNAME=" << QString::fromStdString(FileIOTools::GetEMsoftPathName()) << "\n";
     out << "Output from " << k_ExeName << " follows next...."
         << "\n";
     out << "===========================================================\n";
 
     emit stdOutputMessageGenerated(str);
+
     QString nmlFilePath = tempDir.path() + QDir::separator() + k_NMLName;
     generateNMLFile(nmlFilePath);
     QStringList parameters = {nmlFilePath};
@@ -135,7 +143,7 @@ void MonteCarloSimulationController::execute()
 
   str = "";
   out << "===========================================================\n";
-  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString("yyyy:MM:dd hh:mm:ss.zzz");
+  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString(dtFormat);
   emit stdOutputMessageGenerated(str);
 
   emit finished();
@@ -159,11 +167,22 @@ void MonteCarloSimulationController::generateNMLFile(const QString& path)
   nml.emplace_back(std::string("! name of the crystal structure file"));
   nml.emplace_back(FileIOTools::CreateNMLEntry("xtalname", m_InputData.inputFilePath));
   nml.emplace_back(std::string("! for full mode: sample tilt angle from horizontal [degrees]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::sig, m_InputData.sampleTiltAngleSig));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::sig, static_cast<float>(m_InputData.sampleTiltAngleSig)));
+
+  nml.emplace_back(std::string("! for bse1 mode: start angle"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::sigstart, static_cast<float>(m_InputData.sampleStartTiltAngle)));
+  nml.emplace_back(std::string("! for bse1 mode: end angle"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::sigend, static_cast<float>(m_InputData.sampleEndTiltAngle)));
+
+  nml.emplace_back(std::string("! for bse1 mode: sig step size"));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::sigstep, static_cast<float>(m_InputData.sampleTiltStepSize)));
+
   nml.emplace_back(std::string("! sample tilt angle around RD axis [degrees]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::omega, m_InputData.sampleRotAngleOmega));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::omega, static_cast<float>(m_InputData.sampleRotAngleOmega)));
+
   nml.emplace_back(std::string("! number of pixels along x-direction of square projection [odd number!]"));
   nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::numsx, m_InputData.numOfPixelsN));
+
   nml.emplace_back(std::string("! number of incident electrons per thread"));
   nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::num_el, m_InputData.numOfEPerWorkitem));
   nml.emplace_back(std::string("! GPU platform ID selector"));
@@ -176,15 +195,15 @@ void MonteCarloSimulationController::generateNMLFile(const QString& path)
   nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::totnumel, m_InputData.totalNumOfEConsidered));
   nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::multiplier, m_InputData.multiplierForTotalNumOfE));
   nml.emplace_back(std::string("! incident beam energy [keV]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::EkeV, static_cast<double>(m_InputData.acceleratingVoltage)));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::EkeV, m_InputData.acceleratingVoltage));
   nml.emplace_back(std::string("! minimum energy to consider [keV]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::Ehistmin, static_cast<double>(m_InputData.minEnergyConsider)));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::Ehistmin, m_InputData.minEnergyConsider));
   nml.emplace_back(std::string("! energy binsize [keV]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::Ebinsize, static_cast<double>(m_InputData.energyBinSize)));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::Ebinsize, m_InputData.energyBinSize));
   nml.emplace_back(std::string("! maximum depth to consider for exit depth statistics [nm]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthmax, static_cast<double>(m_InputData.maxDepthConsider)));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthmax, m_InputData.maxDepthConsider));
   nml.emplace_back(std::string("! depth step size [nm]"));
-  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthstep, static_cast<double>(m_InputData.depthStepSize)));
+  nml.emplace_back(FileIOTools::CreateNMLEntry(EMsoft::Constants::depthstep, m_InputData.depthStepSize));
   nml.emplace_back(std::string("! should the user be notified by email or Slack that the program has completed its run?"));
   nml.emplace_back(FileIOTools::CreateNMLEntry(QString("Notify"), QString("Off")));
   nml.emplace_back(std::string("! output data file name; pathname is relative to the EMdatapathname path !!!"));
@@ -202,6 +221,7 @@ void MonteCarloSimulationController::generateNMLFile(const QString& path)
       out << QString::fromStdString(entry) << "\n";
     }
     outputFile.close();
+    outputFile.copy("/tmp/EMMCOpenCL.nml");
   }
   else
   {
