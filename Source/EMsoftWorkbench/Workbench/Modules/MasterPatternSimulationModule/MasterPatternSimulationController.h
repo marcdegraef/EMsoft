@@ -37,8 +37,8 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QProcess>
+#include <QtCore/QSharedPointer>
 #include <QtCore/QString>
-#include <QtCore/QTemporaryDir>
 
 class MasterPatternSimulationController : public QObject
 {
@@ -58,17 +58,6 @@ public:
     EBSD,
     ECP
   };
-
-  /**
-   * @brief Setter property for Cancel
-   */
-  void setCancel(const bool& value);
-
-  /**
-   * @brief Getter property for Cancel
-   * @return Value of Cancel
-   */
-  bool getCancel() const;
 
   /**
    *
@@ -118,6 +107,11 @@ public slots:
    */
   void execute();
 
+  /**
+   * @brief cancelProcess
+   */
+  void cancelProcess();
+
 protected slots:
   void processFinished(int exitCode, QProcess::ExitStatus exitStatus);
 
@@ -134,6 +128,7 @@ private:
   bool m_Executing = false;
 
   InputDataType m_InputData;
+  QSharedPointer<QProcess> m_CurrentProcess;
 
   /**
    * @brief MonteCarloSimulationController::generateNMLFile

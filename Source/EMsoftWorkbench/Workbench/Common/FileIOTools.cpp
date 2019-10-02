@@ -75,6 +75,50 @@ QString FileIOTools::GetSavePathFromDialog(const QString &title, const QString &
 
   return filePath;
 }
+
+// -----------------------------------------------------------------------------
+QString FileIOTools::GetAbsolutePath(const QString& path)
+{
+  QString absolutePath = path;
+  QFileInfo fi(absolutePath);
+  if(fi.isRelative())
+  {
+    QDir dir = QDir(qApp->applicationDirPath());
+
+    QString parentPath;
+
+#if defined(SIMPL_RELATIVE_PATH_CHECK)
+    parentPath = m_SIMPLDataDirectory;
+#else
+#if defined(Q_OS_MAC)
+    if(dir.dirName() == "MacOS")
+    {
+      dir.cdUp();
+      dir.cdUp();
+      dir.cdUp();
+    }
+#elif defined(Q_OS_LINUX)
+    dir.cdUp();
+#endif
+
+    parentPath = dir.absolutePath();
+#endif
+
+    if(!path.startsWith(QDir::separator()) && !parentPath.endsWith(QDir::separator()))
+    {
+      absolutePath.prepend(QDir::separator());
+    }
+    absolutePath.prepend(parentPath);
+    absolutePath = QDir::toNativeSeparators(absolutePath);
+// macOS and Linux do not like to have a ":" character in the path names
+#if !defined(Q_OS_WIN)
+    absolutePath.replace(":", "");
+#endif
+  }
+
+  return absolutePath;
+}
+
 // -----------------------------------------------------------------------------
 std::string FileIOTools::CreateNMLEntry(const QString& key, const QString& value, bool last)
 {

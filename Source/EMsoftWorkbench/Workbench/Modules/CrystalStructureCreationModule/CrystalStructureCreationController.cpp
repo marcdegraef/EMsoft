@@ -46,7 +46,8 @@
 
 #include "EMsoftLib/EMsoftStringConstants.h"
 
-#include "Common/EMsoftFileWriter.h"
+#include "Workbench/Common/EMsoftFileWriter.h"
+#include "Workbench/Common/FileIOTools.h"
 
 #include "H5Support/H5ScopedSentinel.h"
 #include "H5Support/QH5Utilities.h"
@@ -67,9 +68,9 @@ CrystalStructureCreationController::~CrystalStructureCreationController() = defa
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void CrystalStructureCreationController::createCrystalStructureFile(CrystalStructureCreationController::CrystalStructureCreationData data) const
+void CrystalStructureCreationController::createCrystalStructureFile(const CrystalStructureCreationController::CrystalStructureCreationData& data) const
 {
-  QString outputFilePath = data.outputFilePath;
+  QString outputFilePath = FileIOTools::GetAbsolutePath(data.outputFilePath);
   outputFilePath = QDir::toNativeSeparators(outputFilePath);
 
   QString tmpOutputFilePath = outputFilePath + ".tmp";
@@ -229,21 +230,21 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   }
 
   // SpaceGroupNumber
-  if(!writer->writeScalarDataset(EMsoft::Constants::SpaceGroupNumber, data.spaceGroupNumber))
+  if(writer->writeScalarDataset(EMsoft::Constants::SpaceGroupNumber, data.spaceGroupNumber) < 0)
   {
     QFile::remove(tmpOutputFilePath);
     return;
   }
 
   // SpaceGroupSetting
-  if(!writer->writeScalarDataset(EMsoft::Constants::SpaceGroupSetting, data.spaceGroupSetting))
+  if(writer->writeScalarDataset(EMsoft::Constants::SpaceGroupSetting, data.spaceGroupSetting) < 0)
   {
     QFile::remove(tmpOutputFilePath);
     return;
   }
 
   // Natomtypes
-  if(!writer->writeScalarDataset(EMsoft::Constants::Natomtypes, data.atomCoordinates.size()))
+  if(writer->writeScalarDataset(EMsoft::Constants::Natomtypes, data.atomCoordinates.size()) < 0)
   {
     QFile::remove(tmpOutputFilePath);
     return;
@@ -322,6 +323,7 @@ void CrystalStructureCreationController::createCrystalStructureFile(CrystalStruc
   }
 
   emit stdOutputMessageGenerated("Crystal Structure File Generation Complete");
+  emit stdOutputMessageGenerated("File Location: " + outputFilePath);
 }
 
 // -----------------------------------------------------------------------------

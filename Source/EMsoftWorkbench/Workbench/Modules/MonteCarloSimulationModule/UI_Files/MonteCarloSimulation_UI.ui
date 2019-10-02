@@ -600,19 +600,6 @@
       <property name="horizontalSpacing">
        <number>4</number>
       </property>
-      <item row="0" column="3">
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
       <item row="0" column="1">
        <widget class="QLineEdit" name="csFilePathLE">
         <property name="text">
@@ -623,17 +610,17 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_10">
-        <property name="text">
-         <string>Crystal Structure File Path</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="2">
        <widget class="QPushButton" name="csSelectBtn">
         <property name="text">
          <string>Select</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_10">
+        <property name="text">
+         <string>Crystal Structure File Path</string>
         </property>
        </widget>
       </item>
@@ -658,30 +645,17 @@
       <property name="bottomMargin">
        <number>4</number>
       </property>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="mcFilePathLE">
-        <property name="text">
-         <string notr="true">Ni-master.h5</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <spacer name="horizontalSpacer_3">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="outputFileNameLabel">
         <property name="text">
          <string>Monte Carlo File Path</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="mcFilePathLE">
+        <property name="text">
+         <string notr="true">Ni-master.h5</string>
         </property>
        </widget>
       </item>
