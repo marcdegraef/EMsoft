@@ -68,12 +68,6 @@ set_target_properties (EMsoftHDFLib PROPERTIES
   BUILD_RPATH "${EMsoft_OpenMP_LIB_DIR}"
 )
 
-if(APPLE AND BUILD_SHARED_LIBS)
-  # set_target_properties(EMsoftLib PROPERTIES MACOSX_RPATH TRUE)
-  # set_target_properties(EMsoftLib PROPERTIES INSTALL_NAME_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-  # set_target_properties(EMsoftLib PROPERTIES BUILD_WITH_INSTALL_RPATH ON)
-endif()
-
 EMsoft_SetupInstallDirs()
 
 #if(BUILD_SHARED_LIBS)
