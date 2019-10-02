@@ -102,11 +102,6 @@ function(Add_EMsoft_Executable)
     SET_TARGET_PROPERTIES(${Z_TARGET} PROPERTIES FOLDER ${Z_SOLUTION_FOLDER})
   endif()
 
-  # if(NOT "${Z_TEMPLATE}" STREQUAL "" AND NOT EXISTS ${Z_TEMPLATE})
-  #   message(STATUS "Missing Template File for Executable ${Z_TARGET}")
-  #   message(STATUS "  ${Z_TEMPLATE}")
-  # endif()
-
   foreach(idir ${Z_INCLUDE_DIRS})
     target_include_directories(${Z_TARGET} PUBLIC ${idir})
   endforeach(idir )
@@ -155,8 +150,9 @@ function(AddEMsoftUnitTest)
     target_include_directories(${Z_TARGET}Lib PUBLIC ${Z_INCLUDE_DIRS})
 
     add_executable( ${Z_TARGET} "${TEST_SOURCE_FILE}")
-    target_link_libraries( ${Z_TARGET} ${Z_TARGET}Lib)
-    set_target_properties( ${Z_TARGET} PROPERTIES FOLDER ${Z_SOLUTION_FOLDER})
+    target_link_libraries(${Z_TARGET} ${Z_TARGET}Lib)
+    set_target_properties(${Z_TARGET} PROPERTIES FOLDER ${Z_SOLUTION_FOLDER})
+    set_target_properties(${Z_TARGET} PROPERTIES BUILD_RPATH "${EMsoft_OpenMP_LIB_DIR}")
 
     
     if(WIN32)

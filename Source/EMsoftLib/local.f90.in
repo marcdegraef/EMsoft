@@ -656,8 +656,8 @@ if (trim(EMXtalFolderpathname).eq.'tryEnvironmentVariable') then
     if (EMXtalFolderpathname(l:l).ne.'/') EMXtalFolderpathname = trim(EMXtalFolderpathname)//'/'
   else
     if (displayEMsoftWarningMessages.eq.0) then 
-      write (error_unit,"(/A)") '  WARNING: Unable to find definition for EMXtalFolderpathname'
-      write (error_unit,"(/A)") '  WARNING: EMXTALFOLDERPATHNAME environment variable was NOT defined as a backup.'
+      write (error_unit,"(A/)") '  WARNING: Unable to find definition for EMXtalFolderpathname'
+      write (error_unit,"(A/)") '  WARNING: EMXTALFOLDERPATHNAME environment variable was NOT defined as a backup.'
       write (error_unit,"(A/)") '     ----> using absolute path convention'
       displayEMsoftWarningMessages = displayEMsoftWarningMessages+1
     end if

@@ -213,12 +213,14 @@ if(WIN32)
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qdiag-disable:11082>
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qip>)
   target_link_options(EMsoftLib PUBLIC /STACK:2000000000 /machine:x64)
-endif()
-
-if(APPLE AND BUILD_SHARED_LIBS)
-  # set_target_properties(EMsoftLib PROPERTIES MACOSX_RPATH TRUE)
-  # set_target_properties(EMsoftLib PROPERTIES INSTALL_NAME_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
-  # set_target_properties(EMsoftLib PROPERTIES BUILD_WITH_INSTALL_RPATH ON)
+else()
+  if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-g>)
+  elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
+    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-debug all>)
+  else()
+    message(WARNING "Fortran compiler not recognized. ${Fortran_COMPILER_NAME}")
+  endif()
 endif()
 
 
