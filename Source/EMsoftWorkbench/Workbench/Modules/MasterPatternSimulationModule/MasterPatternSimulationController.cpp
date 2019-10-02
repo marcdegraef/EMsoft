@@ -45,6 +45,8 @@
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
 #include <QtCore/QProcess>
+#include <QtCore/QProcessEnvironment>
+#include <QtCore/QTemporaryDir>
 
 #include "EMsoftLib/EMsoftStringConstants.h"
 
@@ -102,6 +104,15 @@ void MasterPatternSimulationController::setData(const InputDataType& data)
 }
 
 // -----------------------------------------------------------------------------
+void MasterPatternSimulationController::cancelProcess()
+{
+  if(m_CurrentProcess != nullptr)
+  {
+    m_CurrentProcess->kill();
+  }
+}
+
+// -----------------------------------------------------------------------------
 void MasterPatternSimulationController::execute()
 {
   QString dtFormat("yyyy:MM:dd hh:mm:ss.zzz");
@@ -111,20 +122,20 @@ void MasterPatternSimulationController::execute()
   QString str;
   QTextStream out(&str);
 
-  QSharedPointer<QProcess> process = QSharedPointer<QProcess>(new QProcess());
-  connect(process.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
-  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardError().toStdString())); });
-  connect(process.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
+  m_CurrentProcess = QSharedPointer<QProcess>(new QProcess());
+  connect(m_CurrentProcess.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(m_CurrentProcess->readAllStandardOutput().toStdString())); });
+  connect(m_CurrentProcess.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(m_CurrentProcess->readAllStandardError().toStdString())); });
+  connect(m_CurrentProcess.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())
   {
-    QProcessEnvironment env = process->processEnvironment();
+    QProcessEnvironment env = m_CurrentProcess->processEnvironment();
     env.insert("EMSOFTPATHNAME", QString::fromStdString(FileIOTools::GetEMsoftPathName()));
-    process->setProcessEnvironment(env);
-    out << "Executable Path:" << result.first << "\n";
-    out << "Start Time: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
-    out << "Insert EMSOFTPATHNAME=" << QString::fromStdString(FileIOTools::GetEMsoftPathName()) << "\n";
-    out << "Output from " << k_ExeName << " follows next...."
+    m_CurrentProcess->setProcessEnvironment(env);
+    out << k_ExeName << ": Executable Path:" << result.first << "\n";
+    out << k_ExeName << ": Start Time: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
+    out << k_ExeName << ": Insert EMSOFTPATHNAME=" << QString::fromStdString(FileIOTools::GetEMsoftPathName()) << "\n";
+    out << k_ExeName << ": Output from " << k_ExeName << " follows next...."
         << "\n";
     out << "===========================================================\n";
 
@@ -133,10 +144,10 @@ void MasterPatternSimulationController::execute()
     QString nmlFilePath = tempDir.path() + QDir::separator() + k_NMLName;
     generateNMLFile(nmlFilePath);
     QStringList parameters = {nmlFilePath};
-    process->start(result.first, parameters);
+    m_CurrentProcess->start(result.first, parameters);
 
     // Wait until the QProcess is finished to exit this thread.
-    process->waitForFinished(-1);
+    m_CurrentProcess->waitForFinished(-1);
   }
   else
   {
@@ -145,7 +156,8 @@ void MasterPatternSimulationController::execute()
 
   str = "";
   out << "===========================================================\n";
-  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString(dtFormat);
+  out << k_ExeName << ": Finished: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
+  out << k_ExeName << ": Output File Location: " << m_InputData.inputFilePath << "\n";
   emit stdOutputMessageGenerated(str);
 
   emit finished();
@@ -155,6 +167,8 @@ void MasterPatternSimulationController::execute()
 void MasterPatternSimulationController::generateNMLFile(const QString& path)
 {
   std::vector<std::string> nml;
+
+  m_InputData.inputFilePath = FileIOTools::GetAbsolutePath(m_InputData.inputFilePath);
 
   nml.emplace_back(std::string(" &EBSDmastervars"));
   nml.emplace_back(std::string("! smallest d-spacing to take into account [nm]"));
@@ -200,7 +214,7 @@ void MasterPatternSimulationController::generateNMLFile(const QString& path)
     }
     outputFile.close();
 
-    outputFile.copy("EMEBSDmaster.nml");
+    outputFile.copy("/tmp/EMEBSDmaster.nml");
   }
   else
   {
@@ -307,20 +321,3 @@ void MasterPatternSimulationController::setUpdateProgress(int loopCompleted, int
   QString ss = QObject::tr("Master Pattern steps completed: %1 of %2; %3 of %4 energy bins").arg(loopCompleted).arg(totalLoops).arg(EloopCompleted).arg(totalEloops);
   emit stdOutputMessageGenerated(ss);
 }
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void MasterPatternSimulationController::setCancel(const bool& value)
-{
-  m_Cancel = value;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-bool MasterPatternSimulationController::getCancel() const
-{
-  return m_Cancel;
-}
-

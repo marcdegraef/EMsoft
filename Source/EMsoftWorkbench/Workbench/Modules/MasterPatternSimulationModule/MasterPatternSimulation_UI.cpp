@@ -184,11 +184,17 @@ void MasterPatternSimulation_UI::slot_simulateBtn_clicked()
 {
   if(simulateBtn->text() == "Cancel" && m_Controller != nullptr)
   {
-    m_Controller->setCancel(true);
+    m_Controller->cancelProcess();
     emit processCompleted();
     setRunning(false);
     return;
   }
+
+  // Sanity Check the input/output Files
+  QString absPath = FileIOTools::GetAbsolutePath(mcFilePathLE->text());
+  mcFilePathLE->setText(absPath);
+  absPath = FileIOTools::GetAbsolutePath(mpFilePathLE->text());
+  mpFilePathLE->setText(absPath);
 
   // Get the input data
   MasterPatternSimulationController::InputDataType data;
@@ -239,8 +245,6 @@ void MasterPatternSimulation_UI::slot_simulateBtn_clicked()
 // -----------------------------------------------------------------------------
 void MasterPatternSimulation_UI::processFinished()
 {
-  m_Controller->setCancel(false);
-
   simulateBtn->setText("Simulate");
   inputGrpBox->setEnabled(true);
   compParamGrpBox->setEnabled(true);

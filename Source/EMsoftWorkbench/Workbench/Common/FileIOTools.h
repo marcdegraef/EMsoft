@@ -48,6 +48,12 @@ class FileIOTools
     static QString GetSavePathFromDialog(const QString& title, const QString& filters, QString& openDialogLastDirectory);
 
     /**
+     * @brief GetAbsolutePath
+     * @return
+     */
+    static QString GetAbsolutePath(const QString& path);
+
+    /**
      * @brief CreateNMLEntry
      * @param key
      * @param value

@@ -255,11 +255,17 @@ void MonteCarloSimulation_UI::slot_createMonteCarloBtn_clicked()
 {
   if(createMonteCarloBtn->text() == "Cancel" && m_Controller != nullptr)
   {
-    m_Controller->setCancel(true);
+    m_Controller->cancelProcess();
     emit processCompleted();
     setRunning(false);
     return;
   }
+
+  // Sanity Check the input/output Files
+  QString absPath = FileIOTools::GetAbsolutePath(csFilePathLE->text());
+  csFilePathLE->setText(absPath);
+  absPath = FileIOTools::GetAbsolutePath(mcFilePathLE->text());
+  mcFilePathLE->setText(absPath);
 
   // Get the input data
   MonteCarloSimulationController::InputDataType data = getCreationData();
@@ -305,8 +311,6 @@ void MonteCarloSimulation_UI::slot_createMonteCarloBtn_clicked()
 // -----------------------------------------------------------------------------
 void MonteCarloSimulation_UI::processFinished()
 {
-  m_Controller->setCancel(false);
-
   createMonteCarloBtn->setText("Simulate");
   inputGrpBox->setEnabled(true);
   monteCarloGrpBox->setEnabled(true);

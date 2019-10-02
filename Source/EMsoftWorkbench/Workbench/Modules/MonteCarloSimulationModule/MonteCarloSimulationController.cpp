@@ -47,6 +47,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QProcess>
 #include <QtCore/QProcessEnvironment>
+#include <QtCore/QTemporaryDir>
 
 #include "EMsoftLib/EMsoftStringConstants.h"
 
@@ -100,6 +101,12 @@ void MonteCarloSimulationController::setData(const InputDataType& data)
 }
 
 // -----------------------------------------------------------------------------
+void MonteCarloSimulationController::cancelProcess()
+{
+  m_CurrentProcess->kill();
+}
+
+// -----------------------------------------------------------------------------
 void MonteCarloSimulationController::execute()
 {
   QString dtFormat("yyyy:MM:dd hh:mm:ss.zzz");
@@ -109,20 +116,20 @@ void MonteCarloSimulationController::execute()
   QString str;
   QTextStream out(&str);
 
-  QSharedPointer<QProcess> process = QSharedPointer<QProcess>(new QProcess());
-  connect(process.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardOutput().toStdString())); });
-  connect(process.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(process->readAllStandardError().toStdString())); });
-  connect(process.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
+  m_CurrentProcess = QSharedPointer<QProcess>(new QProcess());
+  connect(m_CurrentProcess.data(), &QProcess::readyReadStandardOutput, [=] { emit stdOutputMessageGenerated(QString::fromStdString(m_CurrentProcess->readAllStandardOutput().toStdString())); });
+  connect(m_CurrentProcess.data(), &QProcess::readyReadStandardError, [=] { emit stdOutputMessageGenerated(QString::fromStdString(m_CurrentProcess->readAllStandardError().toStdString())); });
+  connect(m_CurrentProcess.data(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [=](int exitCode, QProcess::ExitStatus exitStatus) { processFinished(exitCode, exitStatus); });
   std::pair<QString, QString> result = FileIOTools::GetExecutablePath(k_ExeName);
   if(!result.first.isEmpty())
   {
-    QProcessEnvironment env = process->processEnvironment();
+    QProcessEnvironment env = m_CurrentProcess->processEnvironment();
     env.insert("EMSOFTPATHNAME", QString::fromStdString(FileIOTools::GetEMsoftPathName()));
-    process->setProcessEnvironment(env);
-    out << "Executable Path:" << result.first << "\n";
-    out << "Start Time: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
-    out << "Insert EMSOFTPATHNAME=" << QString::fromStdString(FileIOTools::GetEMsoftPathName()) << "\n";
-    out << "Output from " << k_ExeName << " follows next...."
+    m_CurrentProcess->setProcessEnvironment(env);
+    out << k_ExeName << ": Executable Path:" << result.first << "\n";
+    out << k_ExeName << ": Start Time: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
+    out << k_ExeName << ": Insert EMSOFTPATHNAME=" << QString::fromStdString(FileIOTools::GetEMsoftPathName()) << "\n";
+    out << k_ExeName << ": Output from " << k_ExeName << " follows next...."
         << "\n";
     out << "===========================================================\n";
 
@@ -131,10 +138,10 @@ void MonteCarloSimulationController::execute()
     QString nmlFilePath = tempDir.path() + QDir::separator() + k_NMLName;
     generateNMLFile(nmlFilePath);
     QStringList parameters = {nmlFilePath};
-    process->start(result.first, parameters);
+    m_CurrentProcess->start(result.first, parameters);
 
     // Wait until the QProcess is finished to exit this thread.
-    process->waitForFinished(-1);
+    m_CurrentProcess->waitForFinished(-1);
   }
   else
   {
@@ -143,10 +150,12 @@ void MonteCarloSimulationController::execute()
 
   str = "";
   out << "===========================================================\n";
-  out << k_ExeName << " finished: " << QDateTime::currentDateTime().toString(dtFormat);
+  out << k_ExeName << ": Finished: " << QDateTime::currentDateTime().toString(dtFormat) << "\n";
+  out << k_ExeName << ": Output File Location: " << m_InputData.outputFilePath << "\n";
   emit stdOutputMessageGenerated(str);
 
   emit finished();
+  m_CurrentProcess = nullptr;
 }
 
 // -----------------------------------------------------------------------------
@@ -154,8 +163,8 @@ void MonteCarloSimulationController::generateNMLFile(const QString& path)
 {
   std::vector<std::string> nml;
 
-  //  std::vector<int32_t> iParPtr = createIParArray();
-  //  std::vector<float> fParPtr = createFParArray();
+  m_InputData.inputFilePath = FileIOTools::GetAbsolutePath(m_InputData.inputFilePath);
+  m_InputData.outputFilePath = FileIOTools::GetAbsolutePath(m_InputData.outputFilePath);
 
   nml.emplace_back(std::string(" &MCCLdata"));
   nml.emplace_back(std::string("! only bse1, full or Ivol simulation"));
@@ -221,7 +230,7 @@ void MonteCarloSimulationController::generateNMLFile(const QString& path)
       out << QString::fromStdString(entry) << "\n";
     }
     outputFile.close();
-    outputFile.copy("/tmp/EMMCOpenCL.nml");
+    // outputFile.copy("/tmp/EMMCOpenCL.nml");
   }
   else
   {
@@ -401,20 +410,4 @@ void MonteCarloSimulationController::setUpdateProgress(int loopCompleted, int to
   QString ss = QObject::tr("MonteCarlo steps completed: %1/%2; BSE Yield %3%").arg(loopCompleted).arg(totalLoops).arg(bseYield);
   emit stdOutputMessageGenerated(ss);
   emit updateMCProgress(loopCompleted, totalLoops, bseYield);
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-void MonteCarloSimulationController::setCancel(const bool& value)
-{
-  m_Cancel = value;
-}
-
-// -----------------------------------------------------------------------------
-//
-// -----------------------------------------------------------------------------
-bool MonteCarloSimulationController::getCancel() const
-{
-  return m_Cancel;
 }

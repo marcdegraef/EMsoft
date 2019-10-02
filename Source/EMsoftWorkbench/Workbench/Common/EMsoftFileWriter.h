@@ -89,7 +89,7 @@ class EMsoftFileWriter : public QObject
      * @return
      */
     template <typename T>
-    bool writeScalarDataset(const QString &dsetName, T value) const
+    herr_t writeScalarDataset(const QString& dsetName, T value) const
     {
       hid_t locId = getCurrentLocId();
       herr_t err = QH5Lite::writeScalarDataset(locId, dsetName, value);
@@ -98,10 +98,10 @@ class EMsoftFileWriter : public QObject
         QString str = QObject::tr("Error writing data set %1/%2").arg(QH5Utilities::getObjectPath(locId), dsetName);
         emit errorMessageGenerated(str, -10005);
         std::cout << str.toStdString() << std::endl;
-        return false;
+        return err;
       }
 
-      return true;
+      return 0;
     }
 
     bool writeStringDataset(const QString &dsetName, const QString &value) const;
