@@ -57,8 +57,13 @@ if (Fortran_COMPILER_NAME MATCHES "ifort.*")
   set(EMsoft_OpenMP_LIBRARY ${MKL_${MKL_OpenMP_Library}_LIBRARY})
   if(EMsoft_OpenMP_LIBRARY)
     get_filename_component(EMsoft_OpenMP_LIB_DIR ${EMsoft_OpenMP_LIBRARY} DIRECTORY)
+    message(STATUS "EMsoft_OpenMP_LIB_DIR: ${EMsoft_OpenMP_LIB_DIR}")
     set(EMsoft_OpenMP_LIB_DIR ${EMsoft_OpenMP_LIB_DIR} CACHE PATH "")
+    get_property(EMsoftSearchDirs GLOBAL PROPERTY EMsoftSearchDirs)
+    file(APPEND "${EMsoftSearchDirs}" "${EMsoft_OpenMP_LIB_DIR};")
   endif()
+
+
 endif()
 
 
