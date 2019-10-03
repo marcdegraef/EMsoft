@@ -187,7 +187,11 @@ create_workflow_test( EXE_NAME EMEBSDmaster
                       OUTPUT_DIR ${EMsoft_NML_TEST_DIR}
                       EXTRA_NML BetheParameters.nml
                     )
-
+math(EXPR test_index "${test_index} + 1")
+create_workflow_test( EXE_NAME EMEBSD
+                      INDEX ${test_index}
+                      OUTPUT_DIR ${EMsoft_NML_TEST_DIR}
+                    )
 
 #------------------------------------------------------------------------------
 # 4: Setup the ADP executable
