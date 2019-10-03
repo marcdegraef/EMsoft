@@ -211,13 +211,16 @@ if(WIN32)
                           $<$<COMPILE_LANGUAGE:Fortran>:/assume:byterecl>
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qopenmp>
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qdiag-disable:11082>
-                          $<$<COMPILE_LANGUAGE:Fortran>:/Qip>)
+                          $<$<COMPILE_LANGUAGE:Fortran>:/Qip>
+                          $<$<COMPILE_LANGUAGE:Fortran>:/heap-arrays>)
   target_link_options(EMsoftLib PUBLIC /STACK:2000000000 /machine:x64)
 else()
   if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
     target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-g>)
   elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
+    target_compile_options(EMsoftLib PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-heap-arrays>)
     target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-debug all>)
+    #target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Release>>:-stand f03 -diag-disable=7025>)
   else()
     message(WARNING "Fortran compiler not recognized. ${Fortran_COMPILER_NAME}")
   endif()
