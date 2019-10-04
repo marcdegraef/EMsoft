@@ -371,7 +371,7 @@ void PatternDisplayController::generatePatternImages(SimulatedPatternDisplayWidg
     }
   }
 
-  int32_t threads = QThreadPool::globalInstance()->maxThreadCount();
+  int32_t threads = 1; // QThreadPool::globalInstance()->maxThreadCount();
   for(int32_t i = 0; i < threads; i++)
   {
     QSharedPointer<QFutureWatcher<void>> watcher(new QFutureWatcher<void>());
