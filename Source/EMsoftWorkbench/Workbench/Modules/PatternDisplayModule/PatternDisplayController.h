@@ -294,7 +294,7 @@ private:
    * @param detectorData
    * @param indexOrder
    */
-  void generatePatternImagesUsingThread(SimulatedPatternDisplayWidget::PatternDisplayData patternData, PatternDisplayController::DetectorData detectorData);
+  void generatePatternImagesUsingThread(const SimulatedPatternDisplayWidget::PatternDisplayData &patternData, const DetectorData &detectorData);
 
   /**
    * @brief generatePatternImage
