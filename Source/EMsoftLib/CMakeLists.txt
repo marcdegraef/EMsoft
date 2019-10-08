@@ -213,15 +213,41 @@ if(WIN32)
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qdiag-disable:11082>
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qdiag-disable:7025>
                           $<$<COMPILE_LANGUAGE:Fortran>:/Qip>
-                          $<$<COMPILE_LANGUAGE:Fortran>:/heap-arrays>)
+                          $<$<COMPILE_LANGUAGE:Fortran>:/heap-arrays>
+                          )
   target_link_options(EMsoftLib PUBLIC /STACK:2000000000 /machine:x64)
 else()
   if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
-    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-g>)
+    # First, Flags that should be used under any build condition
+    target_compile_options(EMsoftLib PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>
+        $<$<COMPILE_LANGUAGE:Fortran>:-fno-sign-zero>
+        $<$<COMPILE_LANGUAGE:Fortran>:-fno-f2c>
+        $<$<COMPILE_LANGUAGE:Fortran>:-std=gnu>
+    )
+    # Next, DEBUG compiler options.
+    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-g>
+                          $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-fcheck=bounds>
+                          $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-O0>
+    )
+    # Next, RELEASE compiler options.
+    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Release>>:-funroll-all-loops>
+                          $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Release>>:-O3>
+    )
+
   elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
-    target_compile_options(EMsoftLib PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-heap-arrays>)
-    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-debug all>)
-    #target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Release>>:-stand f03 -diag-disable=7025>)
+  # First, Flags that should be used under any build condition
+    target_compile_options(EMsoftLib PUBLIC $<$<COMPILE_LANGUAGE:Fortran>:-heap-arrays>
+                                            $<$<COMPILE_LANGUAGE:Fortran>:-qopenmp>
+                                            $<$<COMPILE_LANGUAGE:Fortran>:-assume byterecl>
+                                            $<$<COMPILE_LANGUAGE:Fortran>:-stand f08 -diag-disable=7025>
+    )
+    # Next, DEBUG compiler options.
+    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-debug all> 
+                                            $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-O0> 
+                                            $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Debug>>:-g>
+    )
+    # Next, RELEASE compiler options. 
+    target_compile_options(EMsoftLib PUBLIC $<$<AND:$<COMPILE_LANGUAGE:Fortran>,$<CONFIG:Release>>:-O3>)
   else()
     message(WARNING "Fortran compiler not recognized. ${Fortran_COMPILER_NAME}")
   endif()
