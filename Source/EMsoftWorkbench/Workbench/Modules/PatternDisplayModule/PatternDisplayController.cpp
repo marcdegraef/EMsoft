@@ -235,7 +235,7 @@ void PatternDisplayController::checkImageGenerationCompletion() const
 // -----------------------------------------------------------------------------
 //
 // -----------------------------------------------------------------------------
-void PatternDisplayController::generatePatternImagesUsingThread(SimulatedPatternDisplayWidget::PatternDisplayData patternData, PatternDisplayController::DetectorData detectorData)
+void PatternDisplayController::generatePatternImagesUsingThread(const SimulatedPatternDisplayWidget::PatternDisplayData& patternData, const PatternDisplayController::DetectorData& detectorData)
 {
   PatternListModel* model = PatternListModel::Instance();
 
