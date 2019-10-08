@@ -75,8 +75,11 @@ endif()
 # Create CTest entries for a basic indexing workflow
 #------------------------------------------------------------------------------
 # Use multiple CPU cores to Test
-include(ProcessorCount)
-ProcessorCount(EMsoft_TEST_CPU_COUNT)
+if(NOT DEFINED EMsoft_TEST_CPU_COUNT) 
+  include(ProcessorCount)
+  ProcessorCount(EMsoft_TEST_CPU_COUNT)
+endif()
+message(STATUS "Using ${EMsoft_TEST_CPU_COUNT} CPU Cores for tests")
 
 set(EXE_EXT "")
 if(WIN32)
