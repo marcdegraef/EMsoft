@@ -193,7 +193,7 @@ set(EMsoft_VERSION_SRC_FILE "EMsoftVersion.cpp")
 set(EXE_DEBUG_EXTENSION "_debug")
 
 include(${CMP_SOURCE_DIR}/cmpProject.cmake)
-include (${CMP_SOURCE_DIR}/cmpCMakeMacros.cmake )
+include (${CMP_SOURCE_DIR}/cmpCMakeMacros.cmake)
 
 
 
@@ -234,32 +234,22 @@ set(EXE_DEBUG_EXTENSION "")
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if (Fortran_COMPILER_NAME MATCHES "gfortran.*")
-  # gfortran
-  set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp -fno-sign-zero")
-# set (CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}")
-  set (CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -funroll-all-loops -fno-f2c -O3 -fno-sign-zero -std=gnu")
-  set (CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=bounds -fno-f2c -O0 -g -fno-sign-zero -std=gnu")
+  # These have been moved to the EMsoftLib library declaration as target_compile_options
   get_filename_component (Fortran_COMPILER_PATH ${CMAKE_Fortran_COMPILER} DIRECTORY)
   set(GFortran_LIB_DIR "${Fortran_COMPILER_PATH}/../lib")
 
 elseif (Fortran_COMPILER_NAME MATCHES "ifort.*")
-  # ifort (untested)
-
   if(WIN32)
-    # set (CMAKE_Fortran_FLAGS_RELEASE "/Qopenmp /Qdiag-disable:11082 /Qip")
-    # set (CMAKE_Fortran_FLAGS_DEBUG   "/Qopenmp /Qdiag-disable:11082 /Qip")
     set (CMAKE_SHARED_LINKER_FLAGS "/ignore:4217 /ignore:4049")
   else()
-    set (CMAKE_Fortran_FLAGS "-qopenmp -assume byterecl")
-    set (CMAKE_Fortran_FLAGS_RELEASE "-O3")
-    set (CMAKE_Fortran_FLAGS_DEBUG   "-O0 -g")
+    # These have been moved to the EMsoftLib library declaration as target_compile_options
   endif()
 
 else ()
   message (STATUS "CMAKE_Fortran_COMPILER full path: " ${CMAKE_Fortran_COMPILER})
   message (STATUS "Fortran compiler: " ${Fortran_COMPILER_NAME})
   message (STATUS "No optimized Fortran compiler flags are known.")
-endif (Fortran_COMPILER_NAME MATCHES "gfortran.*")
+endif()
 
 # --------------------------------------------------------------------
 # This should all be for macOS RPath Handling.
