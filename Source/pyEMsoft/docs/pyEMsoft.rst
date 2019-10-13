@@ -12,9 +12,9 @@ will later be read into some of the unittests files.
 
 .. code-block:: bash
 
-    (base) ChaoyideAir:source chaoyizhu$ python3.7
+    ChaoyideAir:source chaoyizhu$ python3.7
     Python 3.7.3 (default, Mar 27 2019, 16:54:48) 
-    [Clang 4.0.1 (tags/RELEASE_401/final)] :: Anaconda, Inc. on darwin
+    [Clang 4.0.1 (tags/RELEASE_401/final)] 
     Type "help", "copyright", "credits" or "license" for more information.
     >>> import os
     >>> os.system('EMmkxtal')
