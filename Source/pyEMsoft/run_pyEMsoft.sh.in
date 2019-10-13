@@ -150,7 +150,7 @@ f2py-f90wrap -c -m _pyEMsoft f90wrap_*.f90 -I${EMsoftBuildLib}  \
 -L@FFTW3_INSTALL@/lib \
 -L@HDF5_INSTALL@/lib \
 --link-lapack_opt \
--lgomp -lgfortran\
+-lgomp -lgfortran \
 -lEMsoftLib -lEMsoftHDFLib -ljsonfortran -lhdf5 -lhdf5_fortran \
 -lclfortran -lfftw3 -lhdf5_cpp -lhdf5_f90cstub -lhdf5_hl_cpp \
 -lhdf5_tools -lhdf5_hl -lhdf5_hl_fortran -lhdf5_hl_f90cstub  1>>build.log 2>>build_error.log
