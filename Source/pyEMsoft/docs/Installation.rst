@@ -12,7 +12,8 @@ The pyEMsoft modules can only be generated after EMsoft has been built:
 - Create a Ni.xtal crystal file in the XtalFolder folder and this will be later used for unittests.
 - Have Python 3.x installed then pip install numpy (other packages are needed to run examples include: jupyter notebook, pyyaml, scikit-image, h5py, matplotlib). 
 - Git clone the `f90wrap <https://github.com/marcdegraef/f90wrap>`_ from our repository which contains minor changes for pyEMsoft. Install `f90wrap <https://github.com/marcdegraef/f90wrap>`_ Install with the setup.py (:bash:`python setup.py install`) and check if f90wrap and f2py-f90wrap have been added to path. These are the two important executables to generate the wrappers.
-- :bash:`cd` into the pyEMsoft folder and use the cmake file to build pyEMsoft and generate the documentation.
+- In the EMsoftBuild, use the auto-generated shell scripts run_pyEMsoft.sh (for pyEMsoft module) to install 
+- In the EMsoftBuild, run_docs.sh can be used to generate a local copy of the documentation.
 - In the Anaconda environment (if f90wrap is install in Anaconda environment), there will be an issue in linking some of the dynamic libraries (see the Debugging section about how to fix these). 
 
 
