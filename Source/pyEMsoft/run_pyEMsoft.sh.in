@@ -184,9 +184,10 @@ fi
 echo " run_pyEMsoft.sh: pyEMsoft wrapper .so file build completed"
 
 # copy the examples and unittests folders into the python wrapper folder
-echo " copying examples and unittests folders into build folder"
+echo " copying pyEMsoftTools.py, examples and unittests folders into build folder"
 cp -R ${pyEMsoft_folder}/examples .
 cp -R ${pyEMsoft_folder}/unittests .
+cp -R ${pyEMsoft_folder}/pyEMsoftTools.py .
 
 echo " Done."
 cd ${currentdir}

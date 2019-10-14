@@ -121,7 +121,7 @@ For conversion from quaternion to orientation matrix, the :python:`qu2eu` functi
     # determining the corresponding orientation matrix of the arbitrary quaternion
     om = pyEMsoft.Rotations.qu2om(q)
 
-To see if the lapack library is correctly linked, you can check if the :python:`om2ax` routine outputs the correct value because it uses lapack to calculate the eigenvalue of a given matrix. A specific unittest is added in the test_rotations.py file to for the verification of the lapack library.
+To see if the lapack library is correctly linked, you can check if the :python:`om2ax` routine outputs the correct value because it uses lapack to calculate the eigenvalue of a given matrix. A specific unittest is added in the test_rotations.py file for the verification of the correct use of lapack library.
 
 In the rotations module, the :python:`init_orientation` and :python:`init_orientaiton_om` functions can be used to communicate with all the rotation conversion functions in the rotations module. By providing a random quaterion and looping over the rotation methods, all the rotation conversion functions can be tested. A double precision quaternion is defined first for the following example (see unittest script test_rotations.py):
 
@@ -303,7 +303,7 @@ A more complicated scenario involves use of :python:`unitcell` defined in the Ty
     LatCell=pyEMsoft.typedefs.unitcell()
     pyEMsoft.crystal.getlatparm(LatCell)
 
- The crystal structure information can be obtained in two ways: 1) either read from an existing .xtal file (as in the unittest file), 2) or go through the steps in Example1_make_crystal.py.
+The crystal structure information can be obtained in two ways: 1) either read from an existing .xtal file (as in the unittest file), 2) or go through the steps in Example1_make_crystal.py.
 
 .. code-block:: python
 
@@ -332,7 +332,7 @@ In some cases, the direct lattice vectors may need to be transformed to reciproc
     pyEMsoft.crystal.transspace(self.LatCell, input_vector, output_vector, inspace, outspace)
     print('The', input_vector, 'in the ', Tools.get_space_string(inspace), 'has been converted to', output_vector,'in', Tools.get_space_string(outspace), '\n')
 
-If coordinate transformation is needed in a given space ('d', 'c' or 'r'), the :python:`trnascoor` function can be called to defined a coordinate transformed
+If coordinate transformation is needed in a given space ('d', 'c' or 'r'), the :python:`transcoor` function can be called to defined a coordinate transformed
 vector from old to new ('on') or new to old ('no').
 
 .. code-block:: python
@@ -384,7 +384,7 @@ The Symmetry module deals with all symmetry-related routines. This includes rout
 
 In the corresponding unittest file (test_symmetry.py), the crystal structure information is directly read from an existing Ni.xtal file (if this does not exist, you need to create one).
 
-The :python:`isgallowed` function helps to determine whether an input (integer array) reciprocal lattice vector is forbidden due to precense of a certain type of atom centering.
+The :python:`isgallowed` function helps to determine whether an input (integer array) diffraction vector is forbidden due to precense of a certain type of atom centering.
 
 .. code-block:: python
 
