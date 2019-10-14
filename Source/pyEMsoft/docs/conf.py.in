@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('DOCPATH'))
 sys.path.append(os.path.abspath('SOURCEPATH'))
-
+master_doc = 'index'
 
 # -- Project information -----------------------------------------------------
 

@@ -1,8 +1,5 @@
-pyEMsoft's Documentation
-====================================
-
 What is pyEMsoft?
-------------------------------------
+====================================
 `EMsoft <https://github.com/EMsoft-org/EMsoft>`_ is an open source program for computation and visualization 
 of scanning electron microscopy diffraction patterns such as EBSD,ECP,TKD, and EKP. pyEMsoft is a Python interface 
 to EMsoft that provides some access of the Fortran types and subrouines. pyEMsoft is automatically generated from a 
