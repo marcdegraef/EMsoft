@@ -457,12 +457,12 @@ integer(kind=irg),dimension(36)   :: PGrot = (/1,1,3,1,3,6,3,6,9,3,9,12,9,6,12,1
 
 !> 3D point groups : Laue group number
 integer(kind=irg),dimension(36)   :: PGLaue =(/2,2,5,5,5,8,8,8,11,11,11,15,15,15,15,17,17, &
-                                              20,20,20,23,23,23,27,27,27,27,29,29,32,32,32,33,34,35,36/)
+                                              20,17,20,23,23,23,27,27,27,27,29,29,32,32,32,33,34,35,36/)
 !DEC$ ATTRIBUTES DLLEXPORT :: PGLaue
 
 !> 3D point groups : inverted Laue group number
 integer(kind=irg),dimension(36)   :: PGLaueinv = (/1,1,2,2,2,3,3,3,4,4,4,5,5,5,5,6,6, &
-                                                   7,7,7,8,8,8,9,9,9,9,10,10,11,11,11,12,13,14,15/)
+                                                   7,767,8,8,8,9,9,9,9,10,10,11,11,11,12,13,14,15/)
 !DEC$ ATTRIBUTES DLLEXPORT :: PGLaueinv
 
 !> 3D point groups mapped onto kvector sampling type (used for master pattern computations) [-1 for special cases]
@@ -814,7 +814,7 @@ real(kind=dbl),dimension(4,152) :: SYM_Qsymop = reshape( (/ &
 !--------------------------------------------------------------------------
 character(2),dimension(32) :: TSLsymtype = (/' 1',' 1',' 2',' 2',' 2','22','22','22', &
                                              ' 4',' 4',' 4','42','42','42','42',' 3', &
-                                             ' 3','32','32','32',' 6',' 6',' 6','62', &
+                                             ' 3','32',' 3','32',' 6',' 6',' 6','62', &
                                              '62','62','62','23','23','43','43','43'/)
 !DEC$ ATTRIBUTES DLLEXPORT :: TSLsymtype
                                              
